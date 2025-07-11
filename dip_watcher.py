@@ -42,12 +42,46 @@ class DipWatcher:
         lookback_periods: Tuple[int, ...] = (5, 20),
         csv_file: str = "dip_alerts.csv",
     ):
-        self.tickers = [t.upper() for t in tickers]
+        self.tickers = [self._format_ticker(t) for t in tickers]
         self.dip_threshold = dip_threshold
         self.max_ask_spread = max_ask_spread
         self.lookback_periods = lookback_periods
         self.csv_file = Path(csv_file)
         self._init_csv()
+    
+    def _format_ticker(self, ticker: str) -> str:
+        """Format ticker symbol for the appropriate exchange."""
+        ticker = ticker.upper()
+        
+        # JSE stocks: Add .JO suffix if not present
+        # Common JSE stocks: SHP, NPN, ABG, AGL, etc.
+        if self._is_jse_stock(ticker):
+            if not ticker.endswith('.JO'):
+                ticker += '.JO'
+        
+        return ticker
+    
+    def _is_jse_stock(self, ticker: str) -> bool:
+        """Check if ticker is likely a JSE stock."""
+        # Remove .JO suffix for checking
+        base_ticker = ticker.replace('.JO', '')
+        
+        # Known JSE stocks - explicit list to avoid false positives
+        jse_stocks = {
+            'SHP', 'NPN', 'ABG', 'AGL', 'APN', 'ARI', 'BAW', 'BID', 'BVT', 'CFR',
+            'CLS', 'CPI', 'DSY', 'EXX', 'FSR', 'GFI', 'GLN', 'GRT', 'HAR', 'IMP',
+            'INL', 'INP', 'JSE', 'KAP', 'LHC', 'MCG', 'MND', 'MNP', 'MRP', 'MSM',
+            'MTN', 'NED', 'NHM', 'NTC', 'OML', 'PIK', 'PRX', 'PSG', 'RBX', 'RDF',
+            'REM', 'RMH', 'RMI', 'SAP', 'SBK', 'SLM', 'SNH', 'SOL', 'SPP', 'SSW',
+            'SUI', 'TBS', 'TKG', 'TRU', 'VOD', 'WHL', 'WBO', 'PPE', 'AMS', 'SOC',
+            'SAN', 'KIO', 'OAS', 'RES', 'ANG', 'BHP', 'BTI', 'DRD', 'HAR', 'IGL',
+            'INC', 'ITU', 'KST', 'LBT', 'MPC', 'MTA', 'NRP', 'OMU', 'PAN', 'PFG',
+            'PPC', 'REI', 'RTO', 'SBP', 'SGL', 'SHF', 'SLR', 'SPG', 'TFG', 'THA',
+            'TKG', 'TSG', 'UCT', 'WEQ', 'ZED'
+        }
+        
+        # Only return True if it's a known JSE stock
+        return base_ticker in jse_stocks
 
     # ------------------------------------------------------------------
     # Public API
@@ -149,12 +183,15 @@ class DipWatcher:
             current_volume = int(current_volume) if current_volume else int(avg_volume)
         except:
             current_volume = int(avg_volume)
+        
+        # JSE stocks might have lower volume, so adjust threshold
+        volume_multiplier = 0.5 if symbol.endswith('.JO') else 0.8
 
         # 5. Entry window conditions
         window_open = (
             dip_pct >= self.dip_threshold
             and spread <= self.max_ask_spread
-            and current_volume >= avg_volume * 0.8  # Be more lenient with volume
+            and current_volume >= avg_volume * volume_multiplier  # Adjusted for JSE
         )
 
         # 6. Log & persist
@@ -174,8 +211,9 @@ class DipWatcher:
             self._append_csv(row)
             click.echo(self._format_row(row))
         else:
-            # Show status even when no alert
-            click.echo(f"[{symbol}] Price: ${last_price:.2f}, Dip: {dip_pct:.2%} (need {self.dip_threshold:.2%})")
+            # Show status even when no alert - format price based on exchange
+            currency = "R" if symbol.endswith('.JO') else "$"
+            click.echo(f"[{symbol}] Price: {currency}{last_price:.2f}, Dip: {dip_pct:.2%} (need {self.dip_threshold:.2%})")
 
     # ------------------------------------------------------------------
     # Helpers
@@ -190,10 +228,12 @@ class DipWatcher:
     @staticmethod
     def _format_row(row: Dict) -> str:
         ts = row["timestamp"].replace("T", " ")  # prettier
+        symbol = row['symbol']
+        currency = "R" if symbol.endswith('.JO') else "$"
         return (
-            f"🚨 ALERT! {ts}  {row['symbol']:5}  "
-            f"price=${row['last_price']:.2f}  "
-            f"bid=${row['bid']:.2f}  ask=${row['ask']:.2f}  "
+            f"🚨 ALERT! {ts}  {symbol:8}  "
+            f"price={currency}{row['last_price']:.2f}  "
+            f"bid={currency}{row['bid']:.2f}  ask={currency}{row['ask']:.2f}  "
             f"spread={row['spread']:.2%}  "
             f"dip={row['dip_pct']:.2%}  "
             f"vol={row['volume']:,} (avg: {row['avg_volume']:,.0f})"
@@ -231,14 +271,26 @@ def main(tickers, dip_threshold, max_ask_spread, lookback, csv_file, interval, c
     """
     Monitor stock tickers for dip entry opportunities.
     
-    Example: python dip_watcher.py AAPL MSFT --dip-threshold 0.10 --interval 30
+    Supports both US stocks (e.g., AAPL) and JSE stocks (e.g., SHP, NPN).
+    JSE stocks will automatically get .JO suffix added.
+    
+    Examples:
+        python dip_watcher.py AAPL MSFT --dip-threshold 0.10 --interval 30
+        python dip_watcher.py SHP NPN ABG --dip-threshold 0.15 --interval 60
+        python dip_watcher.py AAPL SHP MSFT NPN --once
     """
     cfg = load_config(config or "")
 
     # Merge CLI and config file values (CLI wins)
     dip_threshold = dip_threshold or cfg.get("dip_threshold", 0.15)
     max_ask_spread = max_ask_spread or cfg.get("max_ask_spread", 0.02)
-    lookback = lookback or cfg.get("lookback_periods", [5, 20])
+    
+    # Handle lookback periods correctly - convert tuple to list
+    if lookback:
+        lookback = list(lookback)
+    else:
+        lookback = cfg.get("lookback_periods", [5, 20])
+    
     csv_file = csv_file or cfg.get("csv_file", "dip_alerts.csv")
 
     # Validate inputs
@@ -250,16 +302,29 @@ def main(tickers, dip_threshold, max_ask_spread, lookback, csv_file, interval, c
         click.echo("Error: max-ask-spread must be between 0 and 1", err=True)
         return
 
+    # Validate tickers - only process valid ticker symbols
+    valid_tickers = []
+    for ticker in tickers:
+        # Skip if it's just a number (from CLI parsing confusion)
+        if ticker.isdigit():
+            click.echo(f"Warning: Skipping '{ticker}' - not a valid ticker symbol", err=True)
+            continue
+        valid_tickers.append(ticker)
+    
+    if not valid_tickers:
+        click.echo("Error: No valid ticker symbols provided", err=True)
+        return
+
     click.echo(f"Configuration:")
-    click.echo(f"  Tickers: {list(tickers)}")
+    click.echo(f"  Tickers: {valid_tickers}")
     click.echo(f"  Dip threshold: {dip_threshold:.2%}")
     click.echo(f"  Max spread: {max_ask_spread:.2%}")
-    click.echo(f"  Lookback periods: {list(lookback)}")
+    click.echo(f"  Lookback periods: {lookback}")
     click.echo(f"  CSV file: {csv_file}")
     click.echo("")
 
     watcher = DipWatcher(
-        tickers=list(tickers),
+        tickers=valid_tickers,
         dip_threshold=dip_threshold,
         max_ask_spread=max_ask_spread,
         lookback_periods=tuple(lookback),
