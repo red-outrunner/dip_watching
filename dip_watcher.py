@@ -77,7 +77,7 @@ class DipWatcher:
             'SAN', 'KIO', 'OAS', 'RES', 'ANG', 'BHP', 'BTI', 'DRD', 'HAR', 'IGL',
             'INC', 'ITU', 'KST', 'LBT', 'MPC', 'MTA', 'NRP', 'OMU', 'PAN', 'PFG',
             'PPC', 'REI', 'RTO', 'SBP', 'SGL', 'SHF', 'SLR', 'SPG', 'TFG', 'THA',
-            'TKG', 'TSG', 'UCT', 'WEQ', 'ZED', 'HIL'
+            'TKG', 'TSG', 'UCT', 'WEQ', 'ZED', 'HIL', 'CTA', 'NVS'
         }
         
         # Only return True if it's a known JSE stock
