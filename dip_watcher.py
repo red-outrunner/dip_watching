@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import sys
 import time
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
@@ -54,7 +55,6 @@ class DipWatcher:
         ticker = ticker.upper()
         
         # JSE stocks: Add .JO suffix if not present
-        # Common JSE stocks: SHP, NPN, ABG, AGL, etc.
         if self._is_jse_stock(ticker):
             if not ticker.endswith('.JO'):
                 ticker += '.JO'
@@ -63,10 +63,7 @@ class DipWatcher:
     
     def _is_jse_stock(self, ticker: str) -> bool:
         """Check if ticker is likely a JSE stock."""
-        # Remove .JO suffix for checking
         base_ticker = ticker.replace('.JO', '')
-        
-        # Known JSE stocks - explicit list to avoid false positives
         jse_stocks = {
             'SHP', 'NPN', 'ABG', 'AGL', 'APN', 'ARI', 'BAW', 'BID', 'BVT', 'CFR',
             'CLS', 'CPI', 'DSY', 'EXX', 'FSR', 'GFI', 'GLN', 'GRT', 'HAR', 'IMP',
@@ -79,8 +76,6 @@ class DipWatcher:
             'PPC', 'REI', 'RTO', 'SBP', 'SGL', 'SHF', 'SLR', 'SPG', 'TFG', 'THA',
             'TKG', 'TSG', 'UCT', 'WEQ', 'ZED', 'HIL'
         }
-        
-        # Only return True if it's a known JSE stock
         return base_ticker in jse_stocks
 
     def _init_csv(self) -> None:
@@ -96,7 +91,6 @@ class DipWatcher:
         """Fetch and compute stock data, return dict or None on error."""
         tk = yf.Ticker(symbol)
 
-        # 1. Get current price data
         try:
             info = tk.info
             last_price = info.get('currentPrice') or info.get('regularMarketPrice')
@@ -120,7 +114,6 @@ class DipWatcher:
         except Exception:
             return None
 
-        # 2. Historical prices for SMAs & volume
         try:
             hist = tk.history(period="3mo", interval="1d")
             if hist.empty or len(hist) < max(self.lookback_periods):
@@ -128,7 +121,6 @@ class DipWatcher:
         except Exception:
             return None
 
-        # Calculate SMAs
         smas = {}
         for period in self.lookback_periods:
             if len(hist) >= period:
@@ -136,14 +128,9 @@ class DipWatcher:
             else:
                 return None
 
-        # Highest SMA for dip calculation
         highest_sma = max(smas.values())
         dip_pct = (highest_sma - last_price) / highest_sma
-
-        # 3. Bid–ask spread
         spread = (ask - bid) / last_price if last_price > 0 else 0
-
-        # 4. Volume filter (20-day average)
         volume_data = hist["Volume"].tail(20)
         avg_volume = volume_data.mean()
         current_volume = int(info.get('volume', avg_volume)) or int(avg_volume)
@@ -151,14 +138,12 @@ class DipWatcher:
         exchange = 'JSE' if symbol.endswith('.JO') else 'US'
         volume_multiplier = self.volume_multipliers.get(exchange, 0.8)
 
-        # 5. Entry window conditions
         window_open = (
             dip_pct >= self.dip_threshold
             and spread <= self.max_ask_spread
             and current_volume >= avg_volume * volume_multiplier
         )
 
-        # 6. Log to CSV if alert
         if window_open:
             row = {
                 "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
@@ -206,8 +191,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Dip Watching")
         self.setGeometry(100, 100, 800, 600)
 
+        self.watchlist_file = Path("watchlist.json")
+        self.watchlist: List[Dict] = self.load_watchlist()  # {'ticker': str, 'target': float|None, 'notified_target': bool, 'notified_dip': bool}
         self.watcher = DipWatcher(
-            [],
+            [stock['ticker'] for stock in self.watchlist],
             dip_threshold=0.15,
             max_ask_spread=0.02,
             lookback_periods=(5, 20),
@@ -215,11 +202,15 @@ class MainWindow(QMainWindow):
             volume_multipliers={'US': 0.8, 'JSE': 0.5}
         )
 
-        self.watchlist: List[Dict] = []  # {'ticker': str, 'target': float|None, 'notified_target': bool, 'notified_dip': bool}
-
-        self.table = QTableWidget(0, 5)
+        self.table = QTableWidget(len(self.watchlist), 5)
         self.table.setHorizontalHeaderLabels(['Ticker', 'Last Price', 'Change %', 'Target Price', 'Status'])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        for i, stock in enumerate(self.watchlist):
+            self.table.setItem(i, 0, QTableWidgetItem(stock['ticker']))
+            target_item = QTableWidgetItem(str(stock['target']) if stock['target'] is not None else "")
+            target_item.setFlags(Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled)
+            self.table.setItem(i, 3, target_item)
 
         add_btn = QPushButton("Add Ticker")
         add_btn.clicked.connect(self.add_ticker)
@@ -245,9 +236,43 @@ class MainWindow(QMainWindow):
         self.interval = 60000  # 60 seconds in ms
         self.timer.start(self.interval)
 
+    def load_watchlist(self) -> List[Dict]:
+        """Load watchlist from JSON file."""
+        if self.watchlist_file.exists():
+            try:
+                with self.watchlist_file.open('r') as f:
+                    data = json.load(f)
+                    # Validate and format watchlist entries
+                    watchlist = []
+                    for item in data:
+                        ticker = self.watcher._format_ticker(item.get('ticker', ''))
+                        target = item.get('target')
+                        if isinstance(target, (int, float)) or target is None:
+                            watchlist.append({
+                                'ticker': ticker,
+                                'target': target,
+                                'notified_target': False,
+                                'notified_dip': False
+                            })
+                    return watchlist[:25]  # Enforce max 25
+            except Exception:
+                return []
+        return []
+
+    def save_watchlist(self) -> None:
+        """Save watchlist to JSON file."""
+        try:
+            with self.watchlist_file.open('w') as f:
+                json.dump([
+                    {'ticker': stock['ticker'], 'target': stock['target']}
+                    for stock in self.watchlist
+                ], f, indent=2)
+        except Exception:
+            pass
+
     def add_ticker(self):
-        if len(self.watchlist) >= 3:
-            QMessageBox.warning(self, "Limit Reached", "You can open up to 3 stocks on the UI.")
+        if len(self.watchlist) >= 25:
+            QMessageBox.warning(self, "Limit Reached", "You can add up to 25 stocks to the watchlist.")
             return
 
         ticker, ok = QInputDialog.getText(self, "Add Ticker", "Enter ticker symbol:")
@@ -255,18 +280,23 @@ class MainWindow(QMainWindow):
             formatted = self.watcher._format_ticker(ticker)
             if formatted not in [s['ticker'] for s in self.watchlist]:
                 self.watchlist.append({'ticker': formatted, 'target': None, 'notified_target': False, 'notified_dip': False})
+                self.watcher.tickers.append(formatted)
                 row = self.table.rowCount()
                 self.table.insertRow(row)
                 self.table.setItem(row, 0, QTableWidgetItem(formatted))
                 target_item = QTableWidgetItem()
                 target_item.setFlags(Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled)
                 self.table.setItem(row, 3, target_item)
+                self.save_watchlist()
 
     def remove_ticker(self):
         row = self.table.currentRow()
         if row >= 0:
+            ticker = self.watchlist[row]['ticker']
             del self.watchlist[row]
+            self.watcher.tickers.remove(ticker)
             self.table.removeRow(row)
+            self.save_watchlist()
 
     def update_data(self):
         for i, stock in enumerate(self.watchlist):
@@ -296,8 +326,10 @@ class MainWindow(QMainWindow):
                     if stock['target'] != new_target:
                         stock['target'] = new_target
                         stock['notified_target'] = False  # Reset notification if target changes
+                        self.save_watchlist()
                 except ValueError:
                     stock['target'] = None
+                    self.save_watchlist()
 
             # Status and Notifications
             status = ""
