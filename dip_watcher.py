@@ -1,34 +1,32 @@
 #!/usr/bin/env python3
 """
 dip_watcher.py
-Continuously monitor a list of tickers for a configurable "dip entry window".
+Continuously monitor a list of tickers for a configurable "dip entry window" via GUI.
 
 Requirements:
-    pip install yfinance pandas click
+    pip install yfinance pandas PyQt6
 
-Usage examples
---------------
-# Real-time polling every 60 s
-python dip_watcher.py AAPL MSFT --dip-threshold 0.15 --max-ask-spread 0.02 --lookback 5 20
-
-# One-shot run
-python dip_watcher.py TSLA --once --config config.json
-
-# Write to custom CSV
-python dip_watcher.py GME --csv gme_alerts.csv
+Usage:
+    python dip_watcher.py
 """
 
 from __future__ import annotations
 
-import json
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
-import click
 import pandas as pd
 import yfinance as yf
+
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QPushButton,
+    QVBoxLayout, QWidget, QInputDialog, QMessageBox, QHeaderView, QDialog
+)
+from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtGui import QColor
 
 
 class DipWatcher:
@@ -41,12 +39,14 @@ class DipWatcher:
         max_ask_spread: float = 0.02,
         lookback_periods: Tuple[int, ...] = (5, 20),
         csv_file: str = "dip_alerts.csv",
+        volume_multipliers: Dict[str, float] = None,
     ):
         self.tickers = [self._format_ticker(t) for t in tickers]
         self.dip_threshold = dip_threshold
         self.max_ask_spread = max_ask_spread
         self.lookback_periods = lookback_periods
         self.csv_file = Path(csv_file)
+        self.volume_multipliers = volume_multipliers or {'US': 0.8, 'JSE': 0.5}
         self._init_csv()
     
     def _format_ticker(self, ticker: str) -> str:
@@ -83,30 +83,6 @@ class DipWatcher:
         # Only return True if it's a known JSE stock
         return base_ticker in jse_stocks
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-    def scan_once(self) -> None:
-        """Single pass through all tickers."""
-        for symbol in self.tickers:
-            try:
-                self._process_symbol(symbol)
-            except Exception as exc:
-                click.echo(f"[{symbol}] Error: {exc}", err=True)
-
-    def run_forever(self, interval: int = 60) -> None:
-        """Run continuously until KeyboardInterrupt."""
-        click.echo(f"Monitoring {self.tickers} every {interval}s ... (Ctrl-C to stop)")
-        try:
-            while True:
-                self.scan_once()
-                time.sleep(interval)
-        except KeyboardInterrupt:
-            click.echo("\nStopping monitor...")
-
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
     def _init_csv(self) -> None:
         if not self.csv_file.exists():
             header = (
@@ -116,17 +92,16 @@ class DipWatcher:
             )
             self.csv_file.write_text(header)
 
-    def _process_symbol(self, symbol: str) -> None:
+    def get_stock_data(self, symbol: str) -> Optional[Dict]:
+        """Fetch and compute stock data, return dict or None on error."""
         tk = yf.Ticker(symbol)
 
         # 1. Get current price data
         try:
-            # Use info instead of fast_info for more reliable data
             info = tk.info
             last_price = info.get('currentPrice') or info.get('regularMarketPrice')
             
             if not last_price:
-                # Fallback to history if info doesn't have price
                 recent = tk.history(period="1d", interval="1m")
                 if recent.empty:
                     raise ValueError("No current price data available")
@@ -134,37 +109,32 @@ class DipWatcher:
             else:
                 last_price = float(last_price)
             
-            # Get bid/ask if available, otherwise estimate
-            bid = info.get('bid', last_price * 0.999)  # Rough estimate
-            ask = info.get('ask', last_price * 1.001)  # Rough estimate
-            
-            # Convert to float and handle None values
+            bid = info.get('bid', last_price * 0.999)
+            ask = info.get('ask', last_price * 1.001)
             bid = float(bid) if bid else last_price * 0.999
             ask = float(ask) if ask else last_price * 1.001
             
-        except Exception as e:
-            click.echo(f"[{symbol}] Failed to get current price: {e}", err=True)
-            return
+            prev_close = info.get('previousClose')
+            change_pct = ((last_price - prev_close) / prev_close * 100) if prev_close else 0.0
+            
+        except Exception:
+            return None
 
         # 2. Historical prices for SMAs & volume
         try:
-            # Get more data to ensure we have enough for calculations
             hist = tk.history(period="3mo", interval="1d")
             if hist.empty or len(hist) < max(self.lookback_periods):
-                raise ValueError(f"Insufficient historical data (need {max(self.lookback_periods)} days)")
-        except Exception as e:
-            click.echo(f"[{symbol}] Failed to get historical data: {e}", err=True)
-            return
+                raise ValueError(f"Insufficient historical data")
+        except Exception:
+            return None
 
         # Calculate SMAs
         smas = {}
         for period in self.lookback_periods:
             if len(hist) >= period:
-                sma_key = f"SMA_{period}"
-                smas[sma_key] = hist["Close"].tail(period).mean()
+                smas[f"SMA_{period}"] = hist["Close"].tail(period).mean()
             else:
-                click.echo(f"[{symbol}] Warning: Not enough data for {period}-day SMA", err=True)
-                return
+                return None
 
         # Highest SMA for dip calculation
         highest_sma = max(smas.values())
@@ -176,25 +146,19 @@ class DipWatcher:
         # 4. Volume filter (20-day average)
         volume_data = hist["Volume"].tail(20)
         avg_volume = volume_data.mean()
+        current_volume = int(info.get('volume', avg_volume)) or int(avg_volume)
         
-        # Get current volume (estimate if not available)
-        try:
-            current_volume = info.get('volume', avg_volume)
-            current_volume = int(current_volume) if current_volume else int(avg_volume)
-        except:
-            current_volume = int(avg_volume)
-        
-        # JSE stocks might have lower volume, so adjust threshold
-        volume_multiplier = 0.5 if symbol.endswith('.JO') else 0.8
+        exchange = 'JSE' if symbol.endswith('.JO') else 'US'
+        volume_multiplier = self.volume_multipliers.get(exchange, 0.8)
 
         # 5. Entry window conditions
         window_open = (
             dip_pct >= self.dip_threshold
             and spread <= self.max_ask_spread
-            and current_volume >= avg_volume * volume_multiplier  # Adjusted for JSE
+            and current_volume >= avg_volume * volume_multiplier
         )
 
-        # 6. Log & persist
+        # 6. Log to CSV if alert
         if window_open:
             row = {
                 "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
@@ -209,133 +173,179 @@ class DipWatcher:
                 **smas,
             }
             self._append_csv(row)
-            click.echo(self._format_row(row))
-        else:
-            # Show status even when no alert - format price based on exchange
-            currency = "R" if symbol.endswith('.JO') else "$"
-            click.echo(f"[{symbol}] Price: {currency}{last_price:.2f}, Dip: {dip_pct:.2%} (need {self.dip_threshold:.2%})")
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+        currency = "R" if symbol.endswith('.JO') else "$"
+
+        return {
+            'last_price': last_price,
+            'bid': bid,
+            'ask': ask,
+            'spread': spread,
+            'dip_pct': dip_pct,
+            'smas': smas,
+            'volume': current_volume,
+            'avg_volume': avg_volume,
+            'previous_close': prev_close,
+            'change_pct': change_pct,
+            'window_open': window_open,
+            'currency': currency,
+            'exchange': exchange
+        }
+
     def _append_csv(self, row: Dict) -> None:
         try:
             df = pd.DataFrame([row])
             df.to_csv(self.csv_file, mode="a", header=False, index=False)
-        except Exception as e:
-            click.echo(f"Failed to write to CSV: {e}", err=True)
+        except Exception:
+            pass
 
-    @staticmethod
-    def _format_row(row: Dict) -> str:
-        ts = row["timestamp"].replace("T", " ")  # prettier
-        symbol = row['symbol']
-        currency = "R" if symbol.endswith('.JO') else "$"
-        return (
-            f"🚨 ALERT! {ts}  {symbol:8}  "
-            f"price={currency}{row['last_price']:.2f}  "
-            f"bid={currency}{row['bid']:.2f}  ask={currency}{row['ask']:.2f}  "
-            f"spread={row['spread']:.2%}  "
-            f"dip={row['dip_pct']:.2%}  "
-            f"vol={row['volume']:,} (avg: {row['avg_volume']:,.0f})"
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Dip Watching")
+        self.setGeometry(100, 100, 800, 600)
+
+        self.watcher = DipWatcher(
+            [],
+            dip_threshold=0.15,
+            max_ask_spread=0.02,
+            lookback_periods=(5, 20),
+            csv_file="dip_alerts.csv",
+            volume_multipliers={'US': 0.8, 'JSE': 0.5}
         )
 
+        self.watchlist: List[Dict] = []  # {'ticker': str, 'target': float|None, 'notified_target': bool, 'notified_dip': bool}
 
-# ------------------------------------------------------------------
-# CLI
-# ------------------------------------------------------------------
-def load_config(path: str) -> Dict:
-    if Path(path).exists():
-        try:
-            with open(path) as fp:
-                return json.load(fp)
-        except Exception as e:
-            click.echo(f"Error loading config: {e}", err=True)
-    return {}
+        self.table = QTableWidget(0, 5)
+        self.table.setHorizontalHeaderLabels(['Ticker', 'Last Price', 'Change %', 'Target Price', 'Status'])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
+        add_btn = QPushButton("Add Ticker")
+        add_btn.clicked.connect(self.add_ticker)
 
-@click.command()
-@click.argument("tickers", nargs=-1, required=True)
-@click.option("--dip-threshold", type=float, help="Min dip vs SMA to trigger (default: 0.15)")
-@click.option("--max-ask-spread", type=float, help="Max ask spread over last price (default: 0.02)")
-@click.option(
-    "--lookback",
-    multiple=True,
-    type=int,
-    help="Lookback periods for SMA (repeatable, default: 5,20)",
-)
-@click.option("--csv", "csv_file", default="dip_alerts.csv", help="Output CSV file")
-@click.option("--interval", default=60, help="Poll interval in seconds")
-@click.option("--config", default=None, help="JSON config file (CLI flags override)")
-@click.option("--once", is_flag=True, help="Run once and exit")
-def main(tickers, dip_threshold, max_ask_spread, lookback, csv_file, interval, config, once):
-    """
-    Monitor stock tickers for dip entry opportunities.
-    
-    Supports both US stocks (e.g., AAPL) and JSE stocks (e.g., SHP, NPN).
-    JSE stocks will automatically get .JO suffix added.
-    
-    Examples:
-        python dip_watcher.py AAPL MSFT --dip-threshold 0.10 --interval 30
-        python dip_watcher.py SHP NPN ABG --dip-threshold 0.15 --interval 60
-        python dip_watcher.py AAPL SHP MSFT NPN --once
-    """
-    cfg = load_config(config or "")
+        remove_btn = QPushButton("Remove Selected")
+        remove_btn.clicked.connect(self.remove_ticker)
 
-    # Merge CLI and config file values (CLI wins)
-    dip_threshold = dip_threshold or cfg.get("dip_threshold", 0.15)
-    max_ask_spread = max_ask_spread or cfg.get("max_ask_spread", 0.02)
-    
-    # Handle lookback periods correctly - convert tuple to list
-    if lookback:
-        lookback = list(lookback)
-    else:
-        lookback = cfg.get("lookback_periods", [5, 20])
-    
-    csv_file = csv_file or cfg.get("csv_file", "dip_alerts.csv")
+        settings_btn = QPushButton("Settings")
+        settings_btn.clicked.connect(self.open_settings)
 
-    # Validate inputs
-    if dip_threshold <= 0 or dip_threshold >= 1:
-        click.echo("Error: dip-threshold must be between 0 and 1", err=True)
-        return
-    
-    if max_ask_spread <= 0 or max_ask_spread >= 1:
-        click.echo("Error: max-ask-spread must be between 0 and 1", err=True)
-        return
+        layout = QVBoxLayout()
+        layout.addWidget(self.table)
+        layout.addWidget(add_btn)
+        layout.addWidget(remove_btn)
+        layout.addWidget(settings_btn)
 
-    # Validate tickers - only process valid ticker symbols
-    valid_tickers = []
-    for ticker in tickers:
-        # Skip if it's just a number (from CLI parsing confusion)
-        if ticker.isdigit():
-            click.echo(f"Warning: Skipping '{ticker}' - not a valid ticker symbol", err=True)
-            continue
-        valid_tickers.append(ticker)
-    
-    if not valid_tickers:
-        click.echo("Error: No valid ticker symbols provided", err=True)
-        return
+        central = QWidget()
+        central.setLayout(layout)
+        self.setCentralWidget(central)
 
-    click.echo(f"Configuration:")
-    click.echo(f"  Tickers: {valid_tickers}")
-    click.echo(f"  Dip threshold: {dip_threshold:.2%}")
-    click.echo(f"  Max spread: {max_ask_spread:.2%}")
-    click.echo(f"  Lookback periods: {lookback}")
-    click.echo(f"  CSV file: {csv_file}")
-    click.echo("")
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_data)
+        self.interval = 60000  # 60 seconds in ms
+        self.timer.start(self.interval)
 
-    watcher = DipWatcher(
-        tickers=valid_tickers,
-        dip_threshold=dip_threshold,
-        max_ask_spread=max_ask_spread,
-        lookback_periods=tuple(lookback),
-        csv_file=csv_file,
-    )
+    def add_ticker(self):
+        if len(self.watchlist) >= 3:
+            QMessageBox.warning(self, "Limit Reached", "You can open up to 3 stocks on the UI.")
+            return
 
-    if once:
-        watcher.scan_once()
-    else:
-        watcher.run_forever(interval=interval)
+        ticker, ok = QInputDialog.getText(self, "Add Ticker", "Enter ticker symbol:")
+        if ok and ticker:
+            formatted = self.watcher._format_ticker(ticker)
+            if formatted not in [s['ticker'] for s in self.watchlist]:
+                self.watchlist.append({'ticker': formatted, 'target': None, 'notified_target': False, 'notified_dip': False})
+                row = self.table.rowCount()
+                self.table.insertRow(row)
+                self.table.setItem(row, 0, QTableWidgetItem(formatted))
+                target_item = QTableWidgetItem()
+                target_item.setFlags(Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled)
+                self.table.setItem(row, 3, target_item)
+
+    def remove_ticker(self):
+        row = self.table.currentRow()
+        if row >= 0:
+            del self.watchlist[row]
+            self.table.removeRow(row)
+
+    def update_data(self):
+        for i, stock in enumerate(self.watchlist):
+            data = self.watcher.get_stock_data(stock['ticker'])
+            if data is None:
+                self.table.setItem(i, 4, QTableWidgetItem("Error"))
+                continue
+
+            # Last Price
+            price_str = f"{data['currency']}{data['last_price']:.2f}"
+            self.table.setItem(i, 1, QTableWidgetItem(price_str))
+
+            # Change %
+            change_str = f"{data['change_pct']:.2f}%"
+            change_item = QTableWidgetItem(change_str)
+            if data['change_pct'] > 0:
+                change_item.setForeground(QColor("green"))
+            elif data['change_pct'] < 0:
+                change_item.setForeground(QColor("red"))
+            self.table.setItem(i, 2, change_item)
+
+            # Target Price (editable)
+            target_item = self.table.item(i, 3)
+            if target_item and target_item.text():
+                try:
+                    new_target = float(target_item.text())
+                    if stock['target'] != new_target:
+                        stock['target'] = new_target
+                        stock['notified_target'] = False  # Reset notification if target changes
+                except ValueError:
+                    stock['target'] = None
+
+            # Status and Notifications
+            status = ""
+            if data['window_open']:
+                status = "Dip Alert!"
+                if not stock['notified_dip']:
+                    QMessageBox.information(self, "Dip Alert", f"{stock['ticker']} has a dip entry window open!")
+                    stock['notified_dip'] = True
+
+            if stock['target'] is not None and data['last_price'] <= stock['target']:
+                if not stock['notified_target']:
+                    QMessageBox.information(self, "Target Reached", f"{stock['ticker']} reached target price {data['currency']}{stock['target']:.2f}!")
+                    stock['notified_target'] = True
+
+            self.table.setItem(i, 4, QTableWidgetItem(status))
+
+    def open_settings(self):
+        dip_th, ok = QInputDialog.getDouble(self, "Dip Threshold", "Enter dip threshold (0-1):", self.watcher.dip_threshold, 0, 1, decimals=2)
+        if ok:
+            self.watcher.dip_threshold = dip_th
+
+        max_sp, ok = QInputDialog.getDouble(self, "Max Ask Spread", "Enter max ask spread (0-1):", self.watcher.max_ask_spread, 0, 1, decimals=2)
+        if ok:
+            self.watcher.max_ask_spread = max_sp
+
+        lookback_str, ok = QInputDialog.getText(self, "Lookback Periods", "Enter lookback periods (comma separated):", text=",".join(map(str, self.watcher.lookback_periods)))
+        if ok:
+            try:
+                self.watcher.lookback_periods = tuple(map(int, lookback_str.split(',')))
+            except ValueError:
+                pass
+
+        interval, ok = QInputDialog.getInt(self, "Interval (seconds)", "Enter poll interval:", self.interval // 1000, 10, 3600)
+        if ok:
+            self.interval = interval * 1000
+            self.timer.setInterval(self.interval)
+
+        us_mult, ok = QInputDialog.getDouble(self, "US Volume Multiplier", "Enter US volume multiplier:", self.watcher.volume_multipliers.get('US', 0.8), 0, 2, decimals=2)
+        if ok:
+            self.watcher.volume_multipliers['US'] = us_mult
+
+        jse_mult, ok = QInputDialog.getDouble(self, "JSE Volume Multiplier", "Enter JSE volume multiplier:", self.watcher.volume_multipliers.get('JSE', 0.5), 0, 2, decimals=2)
+        if ok:
+            self.watcher.volume_multipliers['JSE'] = jse_mult
 
 
 if __name__ == "__main__":
-    main()
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
