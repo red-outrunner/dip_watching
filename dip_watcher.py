@@ -11,6 +11,7 @@ Usage:
 
 On Pop!_OS/KDE, ensure dependencies:
     sudo apt install libxcb-cursor0 libx11-xcb1 libxcb1 libxcb-xkb1 libxkbcommon-x11-0
+    For KDE Wayland: sudo apt install xwayland
 """
 
 from __future__ import annotations
@@ -25,8 +26,10 @@ from typing import Dict, List, Tuple, Optional
 
 import pandas as pd
 import yfinance as yf
+import matplotlib
+matplotlib.use('QtAgg')  # Use QtAgg backend for PyQt6
+from matplotlib.backends.backend_qtagg import FigureCanvas
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QPushButton,
@@ -34,7 +37,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QDialogButtonBox, QLabel
 )
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QColor, QIcon, QSystemTrayIcon, QPixmap
+from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
 
@@ -122,7 +125,7 @@ class DipWatcher:
         try:
             hist = tk.history(period="3mo", interval="1d")
             if hist.empty or len(hist) < max(self.lookback_periods):
-                raise ValueError(f"Insufficient historical data")
+                raise ValueError("Insufficient historical data")
         except Exception:
             return None
 
@@ -190,7 +193,7 @@ class DipWatcher:
             'window_open': window_open,
             'currency': currency,
             'exchange': exchange,
-            'history': hist  # For volume chart
+            'history': hist
         }
 
     def _append_csv(self, row: Dict) -> None:
@@ -208,8 +211,6 @@ class StockDetailsDialog(QDialog):
         self.setGeometry(200, 200, 600, 400)
 
         layout = QVBoxLayout()
-
-        # Text details
         currency = data['currency']
         details = (
             f"Last Price: {currency}{data['last_price']:.2f}\n"
@@ -226,7 +227,6 @@ class StockDetailsDialog(QDialog):
         label = QLabel(details)
         layout.addWidget(label)
 
-        # Volume chart
         fig, ax = plt.subplots()
         hist = data['history']
         if not hist.empty:
@@ -242,7 +242,6 @@ class StockDetailsDialog(QDialog):
         canvas = FigureCanvas(fig)
         layout.addWidget(canvas)
 
-        # Close button
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -255,9 +254,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Dip Watching")
-        self.setGeometry(100, 100, 1000, 600)  # Wider for more columns
+        self.setGeometry(100, 100, 1000, 600)
 
-        # System tray setup
         self.tray = QSystemTrayIcon(QIcon.fromTheme("stock-chart"), self)
         tray_menu = QMenu()
         show_action = tray_menu.addAction("Show")
@@ -472,10 +470,7 @@ class MainWindow(QMainWindow):
                 self.table.setItem(i, 8, QTableWidgetItem("Error"))
                 continue
 
-            # Last Price
             self.table.setItem(i, 1, QTableWidgetItem(f"{data['currency']}{data['last_price']:.2f}"))
-
-            # Change %
             change_item = QTableWidgetItem(f"{data['change_pct']:.2f}%")
             if data['change_pct'] > 0:
                 change_item.setForeground(QColor("green"))
@@ -483,7 +478,6 @@ class MainWindow(QMainWindow):
                 change_item.setForeground(QColor("red"))
             self.table.setItem(i, 2, change_item)
 
-            # Dip %
             dip_item = QTableWidgetItem(f"{data['dip_pct']:.2%}")
             if data['dip_pct'] >= self.watcher.dip_threshold:
                 dip_item.setForeground(QColor("red"))
@@ -491,14 +485,10 @@ class MainWindow(QMainWindow):
                 dip_item.setForeground(QColor("orange"))
             self.table.setItem(i, 3, dip_item)
 
-            # Volume
             self.table.setItem(i, 4, QTableWidgetItem(f"{data['volume']:,}"))
-
-            # SMAs
             self.table.setItem(i, 5, QTableWidgetItem(f"{data['currency']}{data['smas'].get('SMA_5', 0):.2f}"))
             self.table.setItem(i, 6, QTableWidgetItem(f"{data['currency']}{data['smas'].get('SMA_20', 0):.2f}"))
 
-            # Target Price
             target_item = self.table.item(i, 7)
             if target_item and target_item.text():
                 try:
@@ -511,7 +501,6 @@ class MainWindow(QMainWindow):
                     stock['target'] = None
                     self.save_watchlist()
 
-            # Status and Notifications
             status = ""
             status_item = QTableWidgetItem(status)
             if data['window_open']:
@@ -571,7 +560,8 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    # Try platforms for Pop!_OS/KDE compatibility
+    # Force PyQt6 for matplotlib
+    os.environ['QT_API'] = 'pyqt6'
     platforms = ['xcb', 'wayland']
     app = None
     for platform in platforms:
