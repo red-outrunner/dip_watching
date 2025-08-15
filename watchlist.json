@@ -4,11 +4,19 @@
     "target": null
   },
   {
+    "ticker": "PLTR",
+    "target": null
+  },
+  {
     "ticker": "SDIV",
     "target": null
   },
   {
     "ticker": "BLK",
+    "target": null
+  },
+  {
+    "ticker": "UBS",
     "target": null
   }
 ]

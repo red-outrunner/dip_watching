@@ -121,12 +121,26 @@ class DipWatcher:
         except Exception:
             return None
 
+        # Calculate SMAs
         smas = {}
         for period in self.lookback_periods:
             if len(hist) >= period:
                 smas[f"SMA_{period}"] = hist["Close"].tail(period).mean()
             else:
                 return None
+
+        # Adjust for JSE (prices in cents)
+        exchange = 'JSE' if symbol.endswith('.JO') else 'US'
+        if exchange == 'JSE':
+            last_price /= 100
+            bid /= 100
+            ask /= 100
+            prev_close = prev_close / 100 if prev_close else None
+            for key in smas:
+                smas[key] /= 100
+            # Recalculate change_pct if needed
+            if prev_close:
+                change_pct = ((last_price - prev_close) / prev_close * 100)
 
         highest_sma = max(smas.values())
         dip_pct = (highest_sma - last_price) / highest_sma
@@ -135,7 +149,6 @@ class DipWatcher:
         avg_volume = volume_data.mean()
         current_volume = int(info.get('volume', avg_volume)) or int(avg_volume)
         
-        exchange = 'JSE' if symbol.endswith('.JO') else 'US'
         volume_multiplier = self.volume_multipliers.get(exchange, 0.8)
 
         window_open = (
@@ -159,7 +172,7 @@ class DipWatcher:
             }
             self._append_csv(row)
 
-        currency = "R" if symbol.endswith('.JO') else "$"
+        currency = "R" if exchange == 'JSE' else "$"
 
         return {
             'last_price': last_price,
@@ -205,6 +218,7 @@ class MainWindow(QMainWindow):
         self.table = QTableWidget(len(self.watchlist), 5)
         self.table.setHorizontalHeaderLabels(['Ticker', 'Last Price', 'Change %', 'Target Price', 'Status'])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.setSortingEnabled(True)  # Enable sorting for better UX
 
         for i, stock in enumerate(self.watchlist):
             self.table.setItem(i, 0, QTableWidgetItem(stock['ticker']))
@@ -218,6 +232,9 @@ class MainWindow(QMainWindow):
         remove_btn = QPushButton("Remove Selected")
         remove_btn.clicked.connect(self.remove_ticker)
 
+        refresh_btn = QPushButton("Refresh Now")  # Added for manual refresh
+        refresh_btn.clicked.connect(self.update_data)
+
         settings_btn = QPushButton("Settings")
         settings_btn.clicked.connect(self.open_settings)
 
@@ -225,6 +242,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.table)
         layout.addWidget(add_btn)
         layout.addWidget(remove_btn)
+        layout.addWidget(refresh_btn)
         layout.addWidget(settings_btn)
 
         central = QWidget()
@@ -333,8 +351,10 @@ class MainWindow(QMainWindow):
 
             # Status and Notifications
             status = ""
+            status_item = QTableWidgetItem(status)
             if data['window_open']:
                 status = "Dip Alert!"
+                status_item.setForeground(QColor("red"))  # Color for alert
                 if not stock['notified_dip']:
                     QMessageBox.information(self, "Dip Alert", f"{stock['ticker']} has a dip entry window open!")
                     stock['notified_dip'] = True
@@ -344,7 +364,7 @@ class MainWindow(QMainWindow):
                     QMessageBox.information(self, "Target Reached", f"{stock['ticker']} reached target price {data['currency']}{stock['target']:.2f}!")
                     stock['notified_target'] = True
 
-            self.table.setItem(i, 4, QTableWidgetItem(status))
+            self.table.setItem(i, 4, status_item)
 
     def open_settings(self):
         dip_th, ok = QInputDialog.getDouble(self, "Dip Threshold", "Enter dip threshold (0-1):", self.watcher.dip_threshold, 0, 1, decimals=2)
