@@ -1,0 +1,5 @@
+# requirements.txt
+
+pandas>=1.5.0
+yfinance>=0.2.26
+PyQt6>=6.5.0
