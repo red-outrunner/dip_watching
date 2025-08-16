@@ -20,7 +20,7 @@ import sys
 import time
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
@@ -49,7 +49,7 @@ class DataWorker(QThread):
         super().__init__()
         self.watcher = watcher
         self.watchlist = watchlist
-        self.interval = interval / 1000  # Convert ms to seconds
+        self.interval = interval / 1000
         self.running = True
 
     def run(self):
@@ -83,7 +83,7 @@ class DipWatcher:
         self.max_ask_spread = max_ask_spread
         self.lookback_periods = lookback_periods
         self.csv_file = Path(csv_file)
-        self.volume_multipliers = volume_multipliers or {'US': 0.8, 'JSE': 0.5}
+        self.volume_multipliers = volume_multipliers or {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7}
         self.cache_dir = Path("cache")
         self.cache_dir.mkdir(exist_ok=True)
         self._init_csv()
@@ -93,6 +93,9 @@ class DipWatcher:
         if self._is_jse_stock(ticker):
             if not ticker.endswith('.JO'):
                 ticker += '.JO'
+        elif self._is_lse_stock(ticker):
+            if not ticker.endswith('.L'):
+                ticker += '.L'
         return ticker
     
     def _is_jse_stock(self, ticker: str) -> bool:
@@ -111,17 +114,27 @@ class DipWatcher:
         }
         return base_ticker in jse_stocks
 
+    def _is_lse_stock(self, ticker: str) -> bool:
+        base_ticker = ticker.replace('.L', '')
+        lse_stocks = {
+            'VOD', 'BP', 'HSBA', 'SHEL', 'AZN', 'GSK', 'BATS', 'DGE', 'ULVR', 'REL',
+            'LLOY', 'BARC', 'RBS', 'STAN', 'PRU', 'AV', 'LGEN', 'RIO', 'GLEN', 'AAL',
+            'ANTO', 'TSCO', 'SBRY', 'MKS', 'NG', 'SSE', 'CNA', 'BT.A', 'IMB', 'ABF',
+            'SKG', 'MNDI', 'PSON', 'RTO', 'ITV', 'WPP', 'BRBY', 'HLN', 'CPG', 'BA',
+            'RR', 'IAG', 'EZJ', 'LSEG', 'III', 'ADM', 'SGE', 'EXPN', 'CRDA', 'SPX'
+        }
+        return base_ticker in lse_stocks
+
     def _init_csv(self) -> None:
         if not self.csv_file.exists():
             header = (
-                "timestamp,symbol,last_price,bid,ask,spread,dip_pct,"
+                "timestamp,symbol,exchange,last_price,bid,ask,spread,dip_pct,"
                 + ",".join([f"SMA_{p}" for p in self.lookback_periods])
                 + ",volume,avg_volume\n"
             )
             self.csv_file.write_text(header)
 
     def validate_ticker(self, ticker: str) -> bool:
-        """Check if ticker is valid via yfinance."""
         try:
             tk = yf.Ticker(self._format_ticker(ticker))
             info = tk.info
@@ -130,68 +143,89 @@ class DipWatcher:
             return False
 
     def get_stock_data(self, symbol: str) -> Optional[Dict]:
-        """Fetch stock data, use cache if offline."""
         cache_file = self.cache_dir / f"{symbol.replace('.', '_')}.json"
         tk = yf.Ticker(symbol)
 
-        # Try fetching live data
-        try:
-            info = tk.info
+        # Check cache first
+        use_cache = False
+        cache_data = None
+        if cache_file.exists():
+            try:
+                with cache_file.open('r') as f:
+                    cache_data = json.load(f)
+                    cache_time = datetime.fromisoformat(cache_data.get('timestamp', '2000-01-01T00:00:00'))
+                    if datetime.utcnow() - cache_time < timedelta(hours=24):
+                        use_cache = True
+                    else:
+                        cache_file.unlink()  # Delete expired cache
+            except Exception:
+                cache_file.unlink(missing_ok=True)
+
+        # Fetch live data if cache is invalid or missing
+        if not use_cache:
+            try:
+                info = tk.info
+                last_price = info.get('currentPrice') or info.get('regularMarketPrice')
+                if not last_price:
+                    recent = tk.history(period="1d", interval="1m")
+                    if recent.empty:
+                        raise ValueError("No current price data available")
+                    last_price = float(recent['Close'].iloc[-1])
+                else:
+                    last_price = float(last_price)
+                
+                bid = info.get('bid', last_price * 0.999)
+                ask = info.get('ask', last_price * 1.001)
+                bid = float(bid) if bid else last_price * 0.999
+                ask = float(ask) if ask else last_price * 1.001
+                
+                prev_close = info.get('previousClose')
+                change_pct = ((last_price - prev_close) / prev_close * 100) if prev_close else 0.0
+
+                hist = tk.history(period="3mo", interval="1d")
+                if hist.empty or len(hist) < max(self.lookback_periods):
+                    raise ValueError("Insufficient historical data")
+
+                # Cache data
+                cache_data = {
+                    'info': info,
+                    'history': hist.to_dict(),
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+                try:
+                    with cache_file.open('w') as f:
+                        json.dump(cache_data, f)
+                except Exception:
+                    pass
+            except Exception:
+                # Use cached data if available and not expired
+                if cache_file.exists():
+                    try:
+                        with cache_file.open('r') as f:
+                            cache_data = json.load(f)
+                            cache_time = datetime.fromisoformat(cache_data.get('timestamp', '2000-01-01T00:00:00'))
+                            if datetime.utcnow() - cache_time >= timedelta(hours=24):
+                                cache_file.unlink(missing_ok=True)
+                                return None
+                    except Exception:
+                        cache_file.unlink(missing_ok=True)
+                        return None
+                else:
+                    return None
+        else:
+            info = cache_data.get('info', {})
+            hist_data = cache_data.get('history', {})
+            hist = pd.DataFrame(hist_data)
+            if hist.empty:
+                return None
             last_price = info.get('currentPrice') or info.get('regularMarketPrice')
             if not last_price:
-                recent = tk.history(period="1d", interval="1m")
-                if recent.empty:
-                    raise ValueError("No current price data available")
-                last_price = float(recent['Close'].iloc[-1])
-            else:
-                last_price = float(last_price)
-            
-            bid = info.get('bid', last_price * 0.999)
-            ask = info.get('ask', last_price * 1.001)
-            bid = float(bid) if bid else last_price * 0.999
-            ask = float(ask) if ask else last_price * 1.001
-            
+                return None
+            last_price = float(last_price)
+            bid = float(info.get('bid', last_price * 0.999))
+            ask = float(info.get('ask', last_price * 1.001))
             prev_close = info.get('previousClose')
             change_pct = ((last_price - prev_close) / prev_close * 100) if prev_close else 0.0
-
-            hist = tk.history(period="3mo", interval="1d")
-            if hist.empty or len(hist) < max(self.lookback_periods):
-                raise ValueError("Insufficient historical data")
-
-            # Cache data
-            cache_data = {
-                'info': info,
-                'history': hist.to_dict(),
-                'timestamp': datetime.utcnow().isoformat()
-            }
-            try:
-                with cache_file.open('w') as f:
-                    json.dump(cache_data, f)
-            except Exception:
-                pass
-        except Exception:
-            # Use cached data if available
-            if cache_file.exists():
-                try:
-                    with cache_file.open('r') as f:
-                        cache_data = json.load(f)
-                        info = cache_data.get('info', {})
-                        hist_data = cache_data.get('history', {})
-                        hist = pd.DataFrame(hist_data)
-                        if hist.empty:
-                            return None
-                        last_price = info.get('currentPrice') or info.get('regularMarketPrice')
-                        if not last_price:
-                            return None
-                        last_price = float(last_price)
-                        bid = float(info.get('bid', last_price * 0.999))
-                        ask = float(info.get('ask', last_price * 1.001))
-                        prev_close = info.get('previousClose')
-                        change_pct = ((last_price - prev_close) / prev_close * 100) if prev_close else 0.0
-                except Exception:
-                    return None
-            else:
-                return None
 
         smas = {}
         for period in self.lookback_periods:
@@ -200,7 +234,7 @@ class DipWatcher:
             else:
                 return None
 
-        exchange = 'JSE' if symbol.endswith('.JO') else 'US'
+        exchange = 'JSE' if symbol.endswith('.JO') else 'LSE' if symbol.endswith('.L') else 'US'
         if exchange == 'JSE':
             last_price /= 100
             bid /= 100
@@ -230,6 +264,7 @@ class DipWatcher:
             row = {
                 "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
                 "symbol": symbol,
+                "exchange": exchange,
                 "last_price": last_price,
                 "bid": bid,
                 "ask": ask,
@@ -241,7 +276,7 @@ class DipWatcher:
             }
             self._append_csv(row)
 
-        currency = "R" if exchange == 'JSE' else "$"
+        currency = "R" if exchange == 'JSE' else "£" if exchange == 'LSE' else "$"
 
         return {
             'last_price': last_price,
@@ -272,12 +307,13 @@ class DipWatcher:
 class StockDetailsDialog(QDialog):
     def __init__(self, data: Dict, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Details for {data['symbol']}")
+        self.setWindowTitle(f"Details for {data['symbol']} ({data['exchange']})")
         self.setGeometry(200, 200, 600, 400)
 
         layout = QVBoxLayout()
         currency = data['currency']
         details = (
+            f"Exchange: {data['exchange']}\n"
             f"Last Price: {currency}{data['last_price']:.2f}\n"
             f"Bid: {currency}{data['bid']:.2f}\n"
             f"Ask: {currency}{data['ask']:.2f}\n"
@@ -297,7 +333,7 @@ class StockDetailsDialog(QDialog):
         if not hist.empty:
             ax.plot(hist.index, hist['Volume'], label='Volume')
             ax.axhline(data['avg_volume'], color='r', linestyle='--', label='20d Avg Volume')
-            ax.set_title(f"Volume for {data['symbol']}")
+            ax.set_title(f"Volume for {data['symbol']} ({data['exchange']})")
             ax.set_xlabel("Date")
             ax.set_ylabel("Volume")
             ax.legend()
@@ -341,7 +377,7 @@ class MainWindow(QMainWindow):
             max_ask_spread=settings.get('max_ask_spread', 0.02),
             lookback_periods=tuple(settings.get('lookback_periods', [5, 20])),
             csv_file="dip_alerts.csv",
-            volume_multipliers=settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5})
+            volume_multipliers=settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7})
         )
 
         columns = ['Ticker', 'Last Price', 'Change %', 'Dip %', 'Volume', 'SMA 5', 'SMA 20', 'Target Price', 'Status']
@@ -375,7 +411,6 @@ class MainWindow(QMainWindow):
         settings_btn = QPushButton("Settings")
         settings_btn.clicked.connect(self.open_settings)
 
-        # Keyboard shortcuts
         self.addAction(QAction("Refresh", self, shortcut=QKeySequence("Ctrl+R"), triggered=self.update_data))
         self.addAction(QAction("Add Ticker", self, shortcut=QKeySequence("Ctrl+A"), triggered=self.add_ticker))
         self.addAction(QAction("Import Tickers", self, shortcut=QKeySequence("Ctrl+I"), triggered=self.import_tickers))
@@ -396,7 +431,7 @@ class MainWindow(QMainWindow):
         central.setLayout(layout)
         self.setCentralWidget(central)
 
-        self.interval = settings.get('interval', 10) * 1000  # Default to 10s
+        self.interval = settings.get('interval', 10) * 1000
         self.worker = DataWorker(self.watcher, self.watchlist, self.interval)
         self.worker.data_updated.connect(self.handle_data_update)
         self.worker.start()
@@ -412,12 +447,12 @@ class MainWindow(QMainWindow):
                         'lookback_periods': [int(p) for p in settings.get('lookback_periods', [5, 20])],
                         'interval': int(settings.get('interval', 10)),
                         'volume_multipliers': {
-                            k: float(v) for k, v in settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5}).items()
+                            k: float(v) for k, v in settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7}).items()
                         }
                     }
             except Exception:
                 pass
-        return {'dip_threshold': 0.15, 'max_ask_spread': 0.02, 'lookback_periods': [5, 20], 'interval': 10, 'volume_multipliers': {'US': 0.8, 'JSE': 0.5}}
+        return {'dip_threshold': 0.15, 'max_ask_spread': 0.02, 'lookback_periods': [5, 20], 'interval': 10, 'volume_multipliers': {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7}}
 
     def save_settings(self) -> None:
         try:
@@ -468,7 +503,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Limit Reached", "You can add up to 25 stocks to the watchlist.")
             return
 
-        ticker, ok = QInputDialog.getText(self, "Add Ticker", "Enter ticker symbol:")
+        ticker, ok = QInputDialog.getText(self, "Add Ticker", "Enter ticker symbol (e.g., VOD.L for LSE, NED for JSE):")
         if ok and ticker:
             formatted = self.watcher._format_ticker(ticker)
             if not self.watcher.validate_ticker(formatted):
@@ -605,7 +640,6 @@ class MainWindow(QMainWindow):
             self.table.setItem(i, 8, status_item)
 
     def update_data(self):
-        """Manual refresh."""
         results = [(stock, self.watcher.get_stock_data(stock['ticker'])) for stock in self.watchlist]
         self.handle_data_update(results)
 
@@ -642,6 +676,11 @@ class MainWindow(QMainWindow):
         jse_mult, ok = QInputDialog.getDouble(self, "JSE Volume Multiplier", "Enter JSE volume multiplier:", self.watcher.volume_multipliers.get('JSE', 0.5), 0, 2, decimals=2)
         if ok:
             self.watcher.volume_multipliers['JSE'] = jse_mult
+            self.save_settings()
+
+        lse_mult, ok = QInputDialog.getDouble(self, "LSE Volume Multiplier", "Enter LSE volume multiplier:", self.watcher.volume_multipliers.get('LSE', 0.7), 0, 2, decimals=2)
+        if ok:
+            self.watcher.volume_multipliers['LSE'] = lse_mult
             self.save_settings()
 
     def closeEvent(self, event):
