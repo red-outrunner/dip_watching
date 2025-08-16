@@ -1,0 +1,15 @@
+{
+  "dip_threshold": 0.15,
+  "max_ask_spread": 0.02,
+  "lookback_periods": [
+    5,
+    20
+  ],
+  "interval": 10,
+  "volume_multipliers": {
+    "US": 0.8,
+    "JSE": 0.5,
+    "LSE": 0.7
+  },
+  "dark_mode": true
+}
