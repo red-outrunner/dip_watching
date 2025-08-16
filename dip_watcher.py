@@ -4,14 +4,13 @@ dip_watcher.py
 Continuously monitor a list of tickers for a configurable "dip entry window" via GUI.
 
 Requirements:
-    pip install yfinance pandas PyQt6 plotly
+    pip install yfinance pandas PyQt6 PyQt6-WebEngine plotly
 
 Usage:
     python dip_watcher.py
 
 On Pop!_OS/KDE, ensure dependencies:
-    sudo apt install libxcb-cursor0 libx11-xcb1 libxcb1 libxcb-xkb1 libxkbcommon-x11-0
-    For KDE Wayland: sudo apt install xwayland
+    sudo apt install libxcb-cursor0 libx11-xcb1 libxcb1 libxcb-xkb1 libxkbcommon-x11-0 xwayland libqt6webenginecore6 libqt6webenginewidgets6 qt6-webengine-dev
 """
 
 from __future__ import annotations
@@ -55,8 +54,12 @@ class DataWorker(QThread):
         while self.running:
             results = []
             for stock in self.watchlist:
-                data = self.watcher.get_stock_data(stock['ticker'])
-                results.append((stock, data))
+                try:
+                    data = self.watcher.get_stock_data(stock['ticker'])
+                    results.append((stock, data))
+                except Exception as e:
+                    print(f"Error fetching data for {stock['ticker']}: {e}")
+                    results.append((stock, None))
             self.data_updated.emit(results)
             time.sleep(self.interval)
 
@@ -253,13 +256,11 @@ class DipWatcher:
             and current_volume >= avg_volume * volume_multiplier
         )
 
-        # Simple sentiment analysis (mock news-based)
-        sentiment_score = self._calculate_sentiment(symbol)
-
         # Calculate technical indicators
         rsi = self._calculate_rsi(hist["Close"])
         bb_upper, bb_lower = self._calculate_bollinger_bands(hist["Close"])
         fib_levels = self._calculate_fibonacci_retracements(hist["Close"])
+        sentiment_score = self._calculate_sentiment(symbol)
         dip_probability = self._calculate_dip_probability(dip_pct)
 
         if window_open:
@@ -306,9 +307,15 @@ class DipWatcher:
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> float:
         delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss if loss != 0 else np.inf
+        gain = delta.where(delta > 0, 0).rolling(window=period).mean()
+        loss = -delta.where(delta < 0, 0).rolling(window=period).mean()
+        # Compute scalar values for gain and loss
+        avg_gain = gain.iloc[-1] if not gain.empty else 0
+        avg_loss = loss.iloc[-1] if not loss.empty else 0
+        if avg_loss == 0:
+            rs = np.inf
+        else:
+            rs = avg_gain / avg_loss
         return 100 - (100 / (1 + rs)) if rs != np.inf else 100
 
     def _calculate_bollinger_bands(self, prices: pd.Series, period: int = 20, std_dev: float = 2) -> Tuple[np.ndarray, np.ndarray]:
@@ -332,7 +339,6 @@ class DipWatcher:
         }
 
     def _calculate_sentiment(self, symbol: str) -> float:
-        # Mock sentiment analysis (keyword-based, no external API)
         mock_news = {
             'NED.JO': ['strong earnings', 'growth', 'positive outlook'],
             'VOD.L': ['challenges', 'competition', 'recovery expected'],
@@ -344,7 +350,6 @@ class DipWatcher:
         return min(max(score / len(words), -1), 1)
 
     def _calculate_dip_probability(self, dip_pct: float) -> float:
-        # Simple heuristic: higher dip % = higher probability of dip
         return min(dip_pct / self.dip_threshold, 1.0)
 
     def _append_csv(self, row: Dict) -> None:
@@ -393,15 +398,27 @@ class StockDetailsDialog(QDialog):
 
         hist = data['history']
         if not hist.empty:
+            # Adjust history for JSE if needed
+            close_prices = hist['Close']
+            if data['exchange'] == 'JSE':
+                close_prices = close_prices / 100
             # Price chart with SMAs, Bollinger Bands, Fibonacci
-            fig.add_trace(go.Scatter(x=hist.index, y=hist['Close'], name='Price', line=dict(color='blue')), row=1, col=1)
+            fig.add_trace(go.Scatter(x=hist.index, y=close_prices, name='Price', line=dict(color='blue')), row=1, col=1)
             for period, value in data['smas'].items():
                 sma_series = hist['Close'].rolling(window=int(period.split('_')[1])).mean()
+                if data['exchange'] == 'JSE':
+                    sma_series = sma_series / 100
                 fig.add_trace(go.Scatter(x=hist.index, y=sma_series, name=period, line=dict(dash='dash')), row=1, col=1)
-            fig.add_trace(go.Scatter(x=hist.index, y=data['bb_upper'], name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
-            fig.add_trace(go.Scatter(x=hist.index, y=data['bb_lower'], name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
+            bb_upper = data['bb_upper']
+            bb_lower = data['bb_lower']
+            if data['exchange'] == 'JSE':
+                bb_upper = bb_upper / 100
+                bb_lower = bb_lower / 100
+            fig.add_trace(go.Scatter(x=hist.index, y=bb_upper, name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
+            fig.add_trace(go.Scatter(x=hist.index, y=bb_lower, name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
             for level, price in data['fib_levels'].items():
-                fig.add_hline(y=price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
+                fib_price = price / 100 if data['exchange'] == 'JSE' else price
+                fig.add_hline(y=fib_price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
             
             # Volume chart
             fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volume'), row=2, col=1)
@@ -443,7 +460,11 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1000, 600)
         self.is_dark_mode = False
 
-        self.tray = QSystemTrayIcon(QIcon.fromTheme("stock-chart"), self)
+        # Use a fallback icon if "stock-chart" is unavailable
+        icon = QIcon.fromTheme("stock-chart")
+        if icon.isNull():
+            icon = QIcon.fromTheme("application-x-executable")
+        self.tray = QSystemTrayIcon(icon, self)
         tray_menu = QMenu()
         show_action = tray_menu.addAction("Show")
         show_action.triggered.connect(self.show)
@@ -456,6 +477,7 @@ class MainWindow(QMainWindow):
         self.watchlist_file = Path("watchlist.json")
         self.cloud_file = Path("cloud_sync.json")
         settings = self.load_settings()
+        self.is_dark_mode = settings.get('dark_mode', False)
         self.watchlist: List[Dict] = self.load_watchlist()
 
         self.watcher = DipWatcher(
@@ -604,7 +626,6 @@ class MainWindow(QMainWindow):
             pass
 
     def load_watchlist(self) -> List[Dict]:
-        # Try cloud sync first
         if self.cloud_file.exists():
             try:
                 with self.cloud_file.open('r') as f:
@@ -624,7 +645,6 @@ class MainWindow(QMainWindow):
                     return watchlist[:25]
             except Exception:
                 pass
-        # Fallback to local watchlist
         if self.watchlist_file.exists():
             try:
                 with self.watchlist_file.open('r') as f:
