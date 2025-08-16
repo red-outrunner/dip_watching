@@ -1,0 +1,20 @@
+2025-08-16 14:49:20,498 - INFO - Initialized QApplication with platform xcb
+2025-08-16 14:49:20,770 - INFO - System tray initialized with dips.png
+2025-08-16 14:49:20,772 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-16 14:49:20,784 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-16 14:49:20,786 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-16 14:49:20,862 - INFO - DataWorker thread started
+2025-08-16 14:49:20,879 - INFO - MainWindow displayed
+2025-08-16 14:49:20,888 - ERROR - Failed to read cache for NED.JO: Expecting property name enclosed in double quotes: line 1 column 8159 (char 8158)
+2025-08-16 14:49:24,532 - ERROR - Failed to write cache for NED.JO: keys must be str, int, float, bool or None, not Timestamp
+2025-08-16 14:49:30,754 - ERROR - Failed to read cache for NED.JO: Expecting property name enclosed in double quotes: line 1 column 8159 (char 8158)
+2025-08-16 14:49:32,882 - ERROR - Failed to write cache for NED.JO: keys must be str, int, float, bool or None, not Timestamp
+2025-08-16 14:49:34,549 - ERROR - Failed to read cache for NED.JO: Expecting property name enclosed in double quotes: line 1 column 8159 (char 8158)
+2025-08-16 14:49:35,600 - ERROR - Failed to write cache for NED.JO: keys must be str, int, float, bool or None, not Timestamp
+2025-08-16 14:49:45,745 - ERROR - Failed to read cache for NED.JO: Expecting property name enclosed in double quotes: line 1 column 8159 (char 8158)
+2025-08-16 14:49:46,879 - ERROR - Failed to write cache for NED.JO: keys must be str, int, float, bool or None, not Timestamp
+2025-08-16 14:49:56,894 - ERROR - Failed to read cache for NED.JO: Expecting property name enclosed in double quotes: line 1 column 8159 (char 8158)
+2025-08-16 14:49:57,934 - ERROR - Failed to write cache for NED.JO: keys must be str, int, float, bool or None, not Timestamp
+2025-08-16 14:50:07,948 - ERROR - Failed to read cache for NED.JO: Expecting property name enclosed in double quotes: line 1 column 8159 (char 8158)
+2025-08-16 14:50:08,961 - ERROR - Failed to write cache for NED.JO: keys must be str, int, float, bool or None, not Timestamp
+2025-08-16 14:50:10,075 - INFO - Application minimized to system tray
