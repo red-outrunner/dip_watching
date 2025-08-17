@@ -226,3 +226,226 @@
 2025-08-17 15:54:53,409 - WARNING - No data for NED.JO in update
 2025-08-17 15:54:55,112 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
 2025-08-17 15:54:55,117 - INFO - Application minimized to system tray
+2025-08-17 15:55:28,010 - INFO - Initialized QApplication with platform xcb
+2025-08-17 15:55:28,020 - INFO - System tray initialized with dips.png
+2025-08-17 15:55:28,020 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 15:55:28,020 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 15:55:28,021 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-17 15:55:28,083 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:55:28,087 - INFO - DataWorker thread started
+2025-08-17 15:55:28,106 - INFO - MainWindow displayed
+2025-08-17 15:55:28,107 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:55:28,174 - WARNING - No data for NED.JO in update
+2025-08-17 15:55:33,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:55:36,889 - ERROR - Failed to show details for JSE.JO: 'DipWatcher' object has no attribute 'indicators'
+2025-08-17 15:55:38,077 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:55:38,138 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:55:38,163 - WARNING - No data for NED.JO in update
+2025-08-17 15:55:42,756 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:55:42,757 - WARNING - No data available for NED.JO in details dialog
+2025-08-17 15:55:43,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:55:45,832 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:55:45,832 - WARNING - No data available for NED.JO in details dialog
+2025-08-17 15:55:48,077 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:55:48,174 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:55:48,194 - WARNING - No data for NED.JO in update
+2025-08-17 15:55:50,381 - INFO - Synced watchlist and settings to cloud_sync.json
+2025-08-17 15:55:50,382 - INFO - Saved watchlist to watchlist.json
+2025-08-17 15:55:50,382 - INFO - Updated target price for JSE.JO to 230.0
+2025-08-17 15:55:50,383 - INFO - Target price alert triggered for JSE.JO
+2025-08-17 15:55:52,475 - ERROR - Failed to show details for JSE.JO: 'DipWatcher' object has no attribute 'indicators'
+2025-08-17 15:55:53,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:55:55,747 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:55:55,748 - WARNING - No data available for NED.JO in details dialog
+2025-08-17 15:55:58,077 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:55:58,205 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:55:58,227 - WARNING - No data for NED.JO in update
+2025-08-17 15:56:00,979 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:56:00,980 - WARNING - No data available for NED.JO in details dialog
+2025-08-17 15:56:02,981 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:56:02,981 - WARNING - No data available for NED.JO in details dialog
+2025-08-17 15:56:03,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:56:06,239 - INFO - Application minimized to system tray
+2025-08-17 15:56:08,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:56:08,238 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:56:08,259 - WARNING - No data for NED.JO in update
+2025-08-17 15:57:26,592 - INFO - Initialized QApplication with platform xcb
+2025-08-17 15:57:26,603 - INFO - System tray initialized with dips.png
+2025-08-17 15:57:26,603 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 15:57:26,604 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 15:57:26,604 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-17 15:57:26,692 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:57:26,696 - INFO - DataWorker thread started
+2025-08-17 15:57:26,697 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:57:26,813 - INFO - MainWindow displayed
+2025-08-17 15:57:26,942 - WARNING - No data for NED.JO in update
+2025-08-17 15:57:26,953 - INFO - Target price alert triggered for JSE.JO
+2025-08-17 15:57:30,554 - ERROR - Failed to show details for JSE.JO: 'DipWatcher' object has no attribute 'indicators'
+2025-08-17 15:57:31,944 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:57:36,931 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:57:36,954 - WARNING - No data for NED.JO in update
+2025-08-17 15:57:37,077 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:57:37,429 - ERROR - Failed to show details for JSE.JO: 'DipWatcher' object has no attribute 'indicators'
+2025-08-17 15:57:42,076 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:57:46,964 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:57:46,975 - WARNING - No data for NED.JO in update
+2025-08-17 15:57:47,077 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:57:52,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:57:57,026 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:57:57,053 - WARNING - No data for NED.JO in update
+2025-08-17 15:57:57,076 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:02,082 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:07,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:07,104 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:58:07,114 - WARNING - No data for NED.JO in update
+2025-08-17 15:58:12,089 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:17,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:17,138 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:58:17,154 - WARNING - No data for NED.JO in update
+2025-08-17 15:58:22,088 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:27,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:27,204 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:58:27,226 - WARNING - No data for NED.JO in update
+2025-08-17 15:58:32,086 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:37,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:37,248 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:58:37,276 - WARNING - No data for NED.JO in update
+2025-08-17 15:58:42,086 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:47,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:47,327 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:58:47,346 - WARNING - No data for NED.JO in update
+2025-08-17 15:58:52,087 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:57,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:58:57,397 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:58:57,417 - WARNING - No data for NED.JO in update
+2025-08-17 15:59:02,086 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:07,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:07,467 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:59:07,483 - WARNING - No data for NED.JO in update
+2025-08-17 15:59:12,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:17,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:17,533 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:59:17,552 - WARNING - No data for NED.JO in update
+2025-08-17 15:59:22,089 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:27,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:27,604 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:59:27,641 - WARNING - No data for NED.JO in update
+2025-08-17 15:59:32,089 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:37,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:37,693 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:59:37,731 - WARNING - No data for NED.JO in update
+2025-08-17 15:59:42,088 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:47,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:47,776 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:59:47,815 - WARNING - No data for NED.JO in update
+2025-08-17 15:59:52,086 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:57,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 15:59:57,867 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 15:59:57,905 - WARNING - No data for NED.JO in update
+2025-08-17 16:00:02,082 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:07,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:07,955 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:00:07,974 - WARNING - No data for NED.JO in update
+2025-08-17 16:00:12,083 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:17,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:18,025 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:00:18,047 - WARNING - No data for NED.JO in update
+2025-08-17 16:00:22,083 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:27,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:28,099 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:00:28,123 - WARNING - No data for NED.JO in update
+2025-08-17 16:00:32,082 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:37,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:38,173 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:00:38,190 - WARNING - No data for NED.JO in update
+2025-08-17 16:00:42,086 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:47,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:48,242 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:00:48,293 - WARNING - No data for NED.JO in update
+2025-08-17 16:00:52,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:57,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:00:58,343 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:00:58,368 - WARNING - No data for NED.JO in update
+2025-08-17 16:01:02,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:07,153 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:08,419 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:01:08,443 - WARNING - No data for NED.JO in update
+2025-08-17 16:01:12,115 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:17,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:18,493 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:01:18,507 - WARNING - No data for NED.JO in update
+2025-08-17 16:01:22,256 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:27,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:28,558 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:01:28,572 - WARNING - No data for NED.JO in update
+2025-08-17 16:01:32,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:37,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:38,622 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:01:38,638 - WARNING - No data for NED.JO in update
+2025-08-17 16:01:42,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:47,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:48,689 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:01:48,712 - WARNING - No data for NED.JO in update
+2025-08-17 16:01:52,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:57,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:01:58,764 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:01:58,781 - WARNING - No data for NED.JO in update
+2025-08-17 16:02:02,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:07,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:08,831 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:02:08,854 - WARNING - No data for NED.JO in update
+2025-08-17 16:02:12,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:17,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:18,903 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:02:18,918 - WARNING - No data for NED.JO in update
+2025-08-17 16:02:22,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:27,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:28,969 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:02:28,990 - WARNING - No data for NED.JO in update
+2025-08-17 16:02:32,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:37,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:39,041 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:02:39,054 - WARNING - No data for NED.JO in update
+2025-08-17 16:02:42,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:47,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:49,105 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:02:49,124 - WARNING - No data for NED.JO in update
+2025-08-17 16:02:52,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:57,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:02:59,174 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:02:59,188 - WARNING - No data for NED.JO in update
+2025-08-17 16:03:02,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:07,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:09,203 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:03:09,226 - WARNING - No data for NED.JO in update
+2025-08-17 16:03:12,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:17,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:19,277 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:03:19,294 - WARNING - No data for NED.JO in update
+2025-08-17 16:03:22,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:27,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:29,316 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:03:29,332 - WARNING - No data for NED.JO in update
+2025-08-17 16:03:32,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:37,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:39,382 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:03:39,397 - WARNING - No data for NED.JO in update
+2025-08-17 16:03:42,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:47,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:49,447 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:03:49,463 - WARNING - No data for NED.JO in update
+2025-08-17 16:03:52,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:57,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:03:59,513 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:03:59,529 - WARNING - No data for NED.JO in update
+2025-08-17 16:04:02,089 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:04:07,091 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:04:09,579 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:04:09,595 - WARNING - No data for NED.JO in update
+2025-08-17 16:04:12,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:04:17,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:04:19,646 - ERROR - Failed to process cache for NED.JO: Invalid isoformat string: 'Open'
+2025-08-17 16:04:19,675 - WARNING - No data for NED.JO in update
+2025-08-17 16:04:22,084 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:04:27,077 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:04:28,351 - INFO - Application minimized to system tray
