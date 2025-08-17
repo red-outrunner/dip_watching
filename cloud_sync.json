@@ -1,10 +1,10 @@
 [
   {
-    "ticker": "NED.JO",
-    "target": 230.0
+    "ticker": "JSE.JO",
+    "target": null
   },
   {
-    "ticker": "JSE.JO",
-    "target": 230.0
+    "ticker": "NED.JO",
+    "target": null
   }
 ]

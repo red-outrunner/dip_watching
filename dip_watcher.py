@@ -124,7 +124,7 @@ class DipWatcher:
             'SUI', 'TBS', 'TKG', 'TRU', 'VOD', 'WHL', 'WBO', 'PPE', 'AMS', 'SOC',
             'SAN', 'KIO', 'OAS', 'RES', 'ANG', 'BHP', 'BTI', 'DRD', 'HAR', 'IGL',
             'INC', 'ITU', 'KST', 'LBT', 'MPC', 'MTA', 'NRP', 'OMU', 'PAN', 'PFG',
-            'PPC', 'REi', 'RTO', 'SBP', 'SGL', 'SHF', 'SLR', 'SPG', 'TFG', 'THA',
+            'PPC', 'REI', 'RTO', 'SBP', 'SGL', 'SHF', 'SLR', 'SPG', 'TFG', 'THA',
             'TKG', 'TSG', 'UCT', 'WEQ', 'ZED', 'HIL'
         }
         return base_ticker in jse_stocks
@@ -204,12 +204,12 @@ class DipWatcher:
                 if hist.empty or len(hist) < max(self.lookback_periods) or len(hist) < self.rsi_period:
                     raise ValueError("Insufficient historical data")
 
-                # Serialize hist with string keys
-                hist_dict = hist.to_dict()
-                serialized_hist = {key: {k.isoformat(): v for k, v in value.items()} for key, value in hist_dict.items()}
+                # Serialize hist with JSON-safe split orient
+                hist_json = hist.to_json(orient='split')
+
                 cache_data = {
                     'info': info,
-                    'history': serialized_hist,
+                    'history': hist_json,
                     'timestamp': datetime.utcnow().isoformat()
                 }
                 try:
@@ -236,10 +236,8 @@ class DipWatcher:
         else:
             try:
                 info = cache_data.get('info', {})
-                serialized_hist = cache_data.get('history', {})
-                hist_dict = {key: {datetime.fromisoformat(k): v for k, v in value.items()} for key, value in serialized_hist.items()}
-                hist = pd.DataFrame(hist_dict)
-                hist.index = pd.to_datetime(hist.index)
+                hist_json = cache_data.get('history', '{}')
+                hist = pd.read_json(hist_json, orient='split')
                 if hist.empty or len(hist) < max(self.lookback_periods) or len(hist) < self.rsi_period:
                     logger.error(f"Invalid cache data for {symbol}: insufficient history")
                     return None
@@ -453,17 +451,17 @@ class StockDetailsDialog(QDialog):
         # Indicator toggle checkboxes
         indicator_layout = QHBoxLayout()
         self.rsi_check = QCheckBox("RSI")
-        self.rsi_check.setChecked(parent.watcher.indicators['rsi'])
+        self.rsi_check.setChecked(True)
         self.rsi_check.stateChanged.connect(self.update_indicators)
         indicator_layout.addWidget(self.rsi_check)
 
         self.macd_check = QCheckBox("MACD")
-        self.macd_check.setChecked(parent.watcher.indicators['macd'])
+        self.macd_check.setChecked(True)
         self.macd_check.stateChanged.connect(self.update_indicators)
         indicator_layout.addWidget(self.macd_check)
 
         self.vwap_check = QCheckBox("VWAP")
-        self.vwap_check.setChecked(parent.watcher.indicators['vwap'])
+        self.vwap_check.setChecked(True)
         self.vwap_check.stateChanged.connect(self.update_indicators)
         indicator_layout.addWidget(self.vwap_check)
 
@@ -578,339 +576,11 @@ class StockDetailsDialog(QDialog):
                     title_text=f"Analysis for {self.data['symbol']} ({self.data['exchange']})",
                     template='plotly_dark' if self.parent.is_dark_mode else 'plotly',
                     legend=dict(
-                        orientation='h',
+                        orientation='v',
                         yanchor='top',
-                        y=1.05,
+                        y=1,
                         xanchor='left',
-                        x=0,
-                        bgcolor='rgba(0,0,0,0)',
-                        font=dict(size=10)
-                    )
-                )
-                fig.update_xaxes(title_text="Date", row=1, col=1)
-                fig.update_yaxes(title_text=f"Price ({currency})", row=1, col=1)
-                fig.update_xaxes(title_text="Date", row=2, col=1)
-                fig.update_yaxes(title_text="Volume", row=2, col=1)
-                fig.update_xaxes(showticklabels=False, row=3, col=1)
-                fig.update_yaxes(showticklabels=False, row=3, col=1)
-                if self.parent.watcher.indicators['macd']:
-                    fig.update_xaxes(title_text="Date", row=4, col=1)
-                    fig.update_yaxes(title_text="MACD", row=4, col=1)
-
-            self.chart.setHtml(fig.to_html(include_plotlyjs='cdn'))
-        except Exception as e:
-            logger.error(f"Failed to render Plotly chart for {self.data['symbol']}: {str(e)}")
-            self.chart.setHtml("<p>Error rendering chart. Check dip_watcher.log for details.</p>")
-
-    def update_chart(self):
-        try:
-            fig = make_subplots(
-                rows=4, cols=1,
-                subplot_titles=("Price and Technicals", "Volume", "Dip Probability Heatmap", "MACD" if self.parent.watcher.indicators['macd'] else ""),
-                row_heights=[0.4, 0.2, 0.1, 0.3],
-                vertical_spacing=0.1
-            )
-
-            hist = self.data['history']
-            if not hist.empty:
-                # Adjust history for JSE if needed
-                close_prices = hist['Close']
-                if self.data['exchange'] == 'JSE':
-                    close_prices = close_prices / 100
-                # Price chart with SMAs, Bollinger Bands, Fibonacci, VWAP
-                fig.add_trace(go.Scatter(x=hist.index, y=close_prices, name='Price', line=dict(color='blue')), row=1, col=1)
-                for period, value in self.data['smas'].items():
-                    sma_series = hist['Close'].rolling(window=int(period.split('_')[1])).mean()
-                    if self.data['exchange'] == 'JSE':
-                        sma_series = sma_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=sma_series, name=period, line=dict(dash='dash')), row=1, col=1)
-                bb_upper = self.data['bb_upper']
-                bb_lower = self.data['bb_lower']
-                if self.data['exchange'] == 'JSE':
-                    bb_upper = bb_upper / 100
-                    bb_lower = bb_lower / 100
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_upper, name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_lower, name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
-                for level, price in self.data['fib_levels'].items():
-                    fib_price = price / 100 if self.data['exchange'] == 'JSE' else price
-                    fig.add_hline(y=fib_price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
-                if self.parent.watcher.indicators['vwap'] and self.data['vwap'] is not None:
-                    vwap_series = self.data['vwap']
-                    if self.data['exchange'] == 'JSE':
-                        vwap_series = vwap_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=vwap_series, name='VWAP', line=dict(color='purple', dash='dot')), row=1, col=1)
-                
-                # Volume chart
-                fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volume'), row=2, col=1)
-                fig.add_hline(y=self.data['avg_volume'], line_dash="dash", line_color="red", annotation_text="Avg Volume", row=2, col=1)
-                
-                # Dip probability heatmap
-                heatmap_data = [[self.data['dip_probability']]]
-                fig.add_trace(go.Heatmap(z=heatmap_data, colorscale='RdYlGn', showscale=True, zmin=0, zmax=1), row=3, col=1)
-
-                # MACD chart
-                if self.parent.watcher.indicators['macd'] and self.data['macd'] is not None:
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd'], name='MACD', line=dict(color='blue')), row=4, col=1)
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd_signal'], name='Signal', line=dict(color='orange')), row=4, col=1)
-                    fig.add_trace(go.Bar(x=hist.index, y=self.data['macd_hist'], name='Histogram'), row=4, col=1)
-
-                fig.update_layout(
-                    height=600,
-                    showlegend=True,
-                    title_text=f"Analysis for {self.data['symbol']} ({self.data['exchange']})",
-                    template='plotly_dark' if self.parent.is_dark_mode else 'plotly',
-                    legend=dict(
-                        orientation='h',
-                        yanchor='top',
-                        y=1.05,
-                        xanchor='left',
-                        x=0,
-                        bgcolor='rgba(0,0,0,0)',
-                        font=dict(size=10)
-                    )
-                )
-                fig.update_xaxes(title_text="Date", row=1, col=1)
-                fig.update_yaxes(title_text=f"Price ({currency})", row=1, col=1)
-                fig.update_xaxes(title_text="Date", row=2, col=1)
-                fig.update_yaxes(title_text="Volume", row=2, col=1)
-                fig.update_xaxes(showticklabels=False, row=3, col=1)
-                fig.update_yaxes(showticklabels=False, row=3, col=1)
-                if self.parent.watcher.indicators['macd']:
-                    fig.update_xaxes(title_text="Date", row=4, col=1)
-                    fig.update_yaxes(title_text="MACD", row=4, col=1)
-
-            self.chart.setHtml(fig.to_html(include_plotlyjs='cdn'))
-        except Exception as e:
-            logger.error(f"Failed to render Plotly chart for {self.data['symbol']}: {str(e)}")
-            self.chart.setHtml("<p>Error rendering chart. Check dip_watcher.log for details.</p>")
-
-    def update_chart(self):
-        try:
-            fig = make_subplots(
-                rows=4, cols=1,
-                subplot_titles=("Price and Technicals", "Volume", "Dip Probability Heatmap", "MACD" if self.parent.watcher.indicators['macd'] else ""),
-                row_heights=[0.4, 0.2, 0.1, 0.3],
-                vertical_spacing=0.1
-            )
-
-            hist = self.data['history']
-            if not hist.empty:
-                # Adjust history for JSE if needed
-                close_prices = hist['Close']
-                if self.data['exchange'] == 'JSE':
-                    close_prices = close_prices / 100
-                # Price chart with SMAs, Bollinger Bands, Fibonacci, VWAP
-                fig.add_trace(go.Scatter(x=hist.index, y=close_prices, name='Price', line=dict(color='blue')), row=1, col=1)
-                for period, value in self.data['smas'].items():
-                    sma_series = hist['Close'].rolling(window=int(period.split('_')[1])).mean()
-                    if self.data['exchange'] == 'JSE':
-                        sma_series = sma_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=sma_series, name=period, line=dict(dash='dash')), row=1, col=1)
-                bb_upper = self.data['bb_upper']
-                bb_lower = self.data['bb_lower']
-                if self.data['exchange'] == 'JSE':
-                    bb_upper = bb_upper / 100
-                    bb_lower = bb_lower / 100
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_upper, name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_lower, name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
-                for level, price in self.data['fib_levels'].items():
-                    fib_price = price / 100 if self.data['exchange'] == 'JSE' else price
-                    fig.add_hline(y=fib_price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
-                if self.parent.watcher.indicators['vwap'] and self.data['vwap'] is not None:
-                    vwap_series = self.data['vwap']
-                    if self.data['exchange'] == 'JSE':
-                        vwap_series = vwap_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=vwap_series, name='VWAP', line=dict(color='purple', dash='dot')), row=1, col=1)
-                
-                # Volume chart
-                fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volume'), row=2, col=1)
-                fig.add_hline(y=self.data['avg_volume'], line_dash="dash", line_color="red", annotation_text="Avg Volume", row=2, col=1)
-                
-                # Dip probability heatmap
-                heatmap_data = [[self.data['dip_probability']]]
-                fig.add_trace(go.Heatmap(z=heatmap_data, colorscale='RdYlGn', showscale=True, zmin=0, zmax=1), row=3, col=1)
-
-                # MACD chart
-                if self.parent.watcher.indicators['macd'] and self.data['macd'] is not None:
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd'], name='MACD', line=dict(color='blue')), row=4, col=1)
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd_signal'], name='Signal', line=dict(color='orange')), row=4, col=1)
-                    fig.add_trace(go.Bar(x=hist.index, y=self.data['macd_hist'], name='Histogram'), row=4, col=1)
-
-                fig.update_layout(
-                    height=600,
-                    showlegend=True,
-                    title_text=f"Analysis for {self.data['symbol']} ({self.data['exchange']})",
-                    template='plotly_dark' if self.parent.is_dark_mode else 'plotly',
-                    legend=dict(
-                        orientation='h',
-                        yanchor='top',
-                        y=1.05,
-                        xanchor='left',
-                        x=0,
-                        bgcolor='rgba(0,0,0,0)',
-                        font=dict(size=10)
-                    )
-                )
-                fig.update_xaxes(title_text="Date", row=1, col=1)
-                fig.update_yaxes(title_text=f"Price ({currency})", row=1, col=1)
-                fig.update_xaxes(title_text="Date", row=2, col=1)
-                fig.update_yaxes(title_text="Volume", row=2, col=1)
-                fig.update_xaxes(showticklabels=False, row=3, col=1)
-                fig.update_yaxes(showticklabels=False, row=3, col=1)
-                if self.parent.watcher.indicators['macd']:
-                    fig.update_xaxes(title_text="Date", row=4, col=1)
-                    fig.update_yaxes(title_text="MACD", row=4, col=1)
-
-            self.chart.setHtml(fig.to_html(include_plotlyjs='cdn'))
-        except Exception as e:
-            logger.error(f"Failed to render Plotly chart for {self.data['symbol']}: {str(e)}")
-            self.chart.setHtml("<p>Error rendering chart. Check dip_watcher.log for details.</p>")
-
-    def update_chart(self):
-        try:
-            fig = make_subplots(
-                rows=4, cols=1,
-                subplot_titles=("Price and Technicals", "Volume", "Dip Probability Heatmap", "MACD" if self.parent.watcher.indicators['macd'] else ""),
-                row_heights=[0.4, 0.2, 0.1, 0.3],
-                vertical_spacing=0.1
-            )
-
-            hist = self.data['history']
-            if not hist.empty:
-                # Adjust history for JSE if needed
-                close_prices = hist['Close']
-                if self.data['exchange'] == 'JSE':
-                    close_prices = close_prices / 100
-                # Price chart with SMAs, Bollinger Bands, Fibonacci, VWAP
-                fig.add_trace(go.Scatter(x=hist.index, y=close_prices, name='Price', line=dict(color='blue')), row=1, col=1)
-                for period, value in self.data['smas'].items():
-                    sma_series = hist['Close'].rolling(window=int(period.split('_')[1])).mean()
-                    if self.data['exchange'] == 'JSE':
-                        sma_series = sma_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=sma_series, name=period, line=dict(dash='dash')), row=1, col=1)
-                bb_upper = self.data['bb_upper']
-                bb_lower = self.data['bb_lower']
-                if self.data['exchange'] == 'JSE':
-                    bb_upper = bb_upper / 100
-                    bb_lower = bb_lower / 100
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_upper, name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_lower, name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
-                for level, price in self.data['fib_levels'].items():
-                    fib_price = price / 100 if self.data['exchange'] == 'JSE' else price
-                    fig.add_hline(y=fib_price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
-                if self.parent.watcher.indicators['vwap'] and self.data['vwap'] is not None:
-                    vwap_series = self.data['vwap']
-                    if self.data['exchange'] == 'JSE':
-                        vwap_series = vwap_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=vwap_series, name='VWAP', line=dict(color='purple', dash='dot')), row=1, col=1)
-                
-                # Volume chart
-                fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volume'), row=2, col=1)
-                fig.add_hline(y=self.data['avg_volume'], line_dash="dash", line_color="red", annotation_text="Avg Volume", row=2, col=1)
-                
-                # Dip probability heatmap
-                heatmap_data = [[self.data['dip_probability']]]
-                fig.add_trace(go.Heatmap(z=heatmap_data, colorscale='RdYlGn', showscale=True, zmin=0, zmax=1), row=3, col=1)
-
-                # MACD chart
-                if self.parent.watcher.indicators['macd'] and self.data['macd'] is not None:
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd'], name='MACD', line=dict(color='blue')), row=4, col=1)
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd_signal'], name='Signal', line=dict(color='orange')), row=4, col=1)
-                    fig.add_trace(go.Bar(x=hist.index, y=self.data['macd_hist'], name='Histogram'), row=4, col=1)
-
-                fig.update_layout(
-                    height=600,
-                    showlegend=True,
-                    title_text=f"Analysis for {self.data['symbol']} ({self.data['exchange']})",
-                    template='plotly_dark' if self.parent.is_dark_mode else 'plotly',
-                    legend=dict(
-                        orientation='h',
-                        yanchor='top',
-                        y=1.05,
-                        xanchor='left',
-                        x=0,
-                        bgcolor='rgba(0,0,0,0)',
-                        font=dict(size=10)
-                    )
-                )
-                fig.update_xaxes(title_text="Date", row=1, col=1)
-                fig.update_yaxes(title_text=f"Price ({currency})", row=1, col=1)
-                fig.update_xaxes(title_text="Date", row=2, col=1)
-                fig.update_yaxes(title_text="Volume", row=2, col=1)
-                fig.update_xaxes(showticklabels=False, row=3, col=1)
-                fig.update_yaxes(showticklabels=False, row=3, col=1)
-                if self.parent.watcher.indicators['macd']:
-                    fig.update_xaxes(title_text="Date", row=4, col=1)
-                    fig.update_yaxes(title_text="MACD", row=4, col=1)
-
-            self.chart.setHtml(fig.to_html(include_plotlyjs='cdn'))
-        except Exception as e:
-            logger.error(f"Failed to render Plotly chart for {self.data['symbol']}: {str(e)}")
-            self.chart.setHtml("<p>Error rendering chart. Check dip_watcher.log for details.</p>")
-
-    def update_chart(self):
-        try:
-            fig = make_subplots(
-                rows=4, cols=1,
-                subplot_titles=("Price and Technicals", "Volume", "Dip Probability Heatmap", "MACD" if self.parent.watcher.indicators['macd'] else ""),
-                row_heights=[0.4, 0.2, 0.1, 0.3],
-                vertical_spacing=0.1
-            )
-
-            hist = self.data['history']
-            if not hist.empty:
-                # Adjust history for JSE if needed
-                close_prices = hist['Close']
-                if self.data['exchange'] == 'JSE':
-                    close_prices = close_prices / 100
-                # Price chart with SMAs, Bollinger Bands, Fibonacci, VWAP
-                fig.add_trace(go.Scatter(x=hist.index, y=close_prices, name='Price', line=dict(color='blue')), row=1, col=1)
-                for period, value in self.data['smas'].items():
-                    sma_series = hist['Close'].rolling(window=int(period.split('_')[1])).mean()
-                    if self.data['exchange'] == 'JSE':
-                        sma_series = sma_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=sma_series, name=period, line=dict(dash='dash')), row=1, col=1)
-                bb_upper = self.data['bb_upper']
-                bb_lower = self.data['bb_lower']
-                if self.data['exchange'] == 'JSE':
-                    bb_upper = bb_upper / 100
-                    bb_lower = bb_lower / 100
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_upper, name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
-                fig.add_trace(go.Scatter(x=hist.index, y=bb_lower, name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
-                for level, price in self.data['fib_levels'].items():
-                    fib_price = price / 100 if self.data['exchange'] == 'JSE' else price
-                    fig.add_hline(y=fib_price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
-                if self.parent.watcher.indicators['vwap'] and self.data['vwap'] is not None:
-                    vwap_series = self.data['vwap']
-                    if self.data['exchange'] == 'JSE':
-                        vwap_series = vwap_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=vwap_series, name='VWAP', line=dict(color='purple', dash='dot')), row=1, col=1)
-                
-                # Volume chart
-                fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volume'), row=2, col=1)
-                fig.add_hline(y=self.data['avg_volume'], line_dash="dash", line_color="red", annotation_text="Avg Volume", row=2, col=1)
-                
-                # Dip probability heatmap
-                heatmap_data = [[self.data['dip_probability']]]
-                fig.add_trace(go.Heatmap(z=heatmap_data, colorscale='RdYlGn', showscale=True, zmin=0, zmax=1), row=3, col=1)
-
-                # MACD chart
-                if self.parent.watcher.indicators['macd'] and self.data['macd'] is not None:
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd'], name='MACD', line=dict(color='blue')), row=4, col=1)
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd_signal'], name='Signal', line=dict(color='orange')), row=4, col=1)
-                    fig.add_trace(go.Bar(x=hist.index, y=self.data['macd_hist'], name='Histogram'), row=4, col=1)
-
-                fig.update_layout(
-                    height=600,
-                    showlegend=True,
-                    title_text=f"Analysis for {self.data['symbol']} ({self.data['exchange']})",
-                    template='plotly_dark' if self.parent.is_dark_mode else 'plotly',
-                    legend=dict(
-                        orientation='h',
-                        yanchor='top',
-                        y=1.05,
-                        xanchor='left',
-                        x=0,
+                        x=1.02,
                         bgcolor='rgba(0,0,0,0)',
                         font=dict(size=10)
                     )
@@ -938,11 +608,12 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1000, 600)
         self.is_dark_mode = False
 
-        # Use custom icon
+        # Use custom icon for app and tray
         icon_path = "dips.png"
         icon = QIcon(icon_path)
         if icon.isNull():
             logger.error(f"Failed to load icon {icon_path}")
+        self.setWindowIcon(icon)
         self.tray = QSystemTrayIcon(icon, self)
         tray_menu = QMenu()
         show_action = tray_menu.addAction("Show")
@@ -951,7 +622,7 @@ class MainWindow(QMainWindow):
         quit_action.triggered.connect(QApplication.quit)
         self.tray.setContextMenu(tray_menu)
         self.tray.show()
-        logger.info("System tray initialized with dips.png")
+        logger.info("System tray and app initialized with dips.png")
 
         self.settings_file = Path("settings.json")
         self.watchlist_file = Path("watchlist.json")

@@ -449,3 +449,256 @@
 2025-08-17 16:04:22,084 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
 2025-08-17 16:04:27,077 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
 2025-08-17 16:04:28,351 - INFO - Application minimized to system tray
+2025-08-17 16:05:08,199 - INFO - Initialized QApplication with platform xcb
+2025-08-17 16:05:08,330 - INFO - System tray and app initialized with dips.png
+2025-08-17 16:05:08,332 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 16:05:08,332 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 16:05:08,334 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-17 16:05:08,413 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:08,417 - INFO - DataWorker thread started
+2025-08-17 16:05:08,550 - INFO - MainWindow displayed
+2025-08-17 16:05:08,551 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:08,552 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:08,558 - WARNING - No data for NED.JO in update
+2025-08-17 16:05:08,559 - WARNING - No data for JSE.JO in update
+2025-08-17 16:05:13,171 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:18,083 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:18,571 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:18,572 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:18,573 - WARNING - No data for NED.JO in update
+2025-08-17 16:05:18,573 - WARNING - No data for JSE.JO in update
+2025-08-17 16:05:23,083 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:28,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:28,584 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:28,586 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:28,586 - WARNING - No data for NED.JO in update
+2025-08-17 16:05:28,587 - WARNING - No data for JSE.JO in update
+2025-08-17 16:05:33,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:38,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:38,598 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:38,599 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:38,600 - WARNING - No data for NED.JO in update
+2025-08-17 16:05:38,600 - WARNING - No data for JSE.JO in update
+2025-08-17 16:05:40,740 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:40,741 - WARNING - No data available for JSE.JO in details dialog
+2025-08-17 16:05:43,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:46,256 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:46,258 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:46,258 - WARNING - No data for NED.JO in update
+2025-08-17 16:05:46,258 - WARNING - No data for JSE.JO in update
+2025-08-17 16:05:46,259 - INFO - Manual data update triggered
+2025-08-17 16:05:48,611 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:05:49,017 - WARNING - No data for NED.JO in update
+2025-08-17 16:05:49,023 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:53,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:05:58,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:03,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:08,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:12,232 - INFO - Synced watchlist and settings to cloud_sync.json
+2025-08-17 16:06:13,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:19,551 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:21,314 - INFO - Synced watchlist and settings to cloud_sync.json
+2025-08-17 16:06:21,314 - INFO - Saved watchlist to watchlist.json
+2025-08-17 16:06:21,315 - INFO - Added ticker JSE.JO to watchlist
+2025-08-17 16:06:23,079 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:28,082 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:28,645 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:06:28,646 - WARNING - No data for JSE.JO in update
+2025-08-17 16:06:33,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:38,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:38,416 - INFO - Application minimized to system tray
+2025-08-17 16:06:38,656 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:06:38,672 - WARNING - No data for JSE.JO in update
+2025-08-17 16:06:43,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:48,078 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:48,667 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:06:48,668 - WARNING - No data for JSE.JO in update
+2025-08-17 16:06:53,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:58,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:06:58,719 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:06:58,720 - WARNING - No data for JSE.JO in update
+2025-08-17 16:07:03,089 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:08,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:08,740 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:07:08,741 - WARNING - No data for JSE.JO in update
+2025-08-17 16:07:13,099 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:18,103 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:18,756 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:07:18,757 - WARNING - No data for JSE.JO in update
+2025-08-17 16:07:23,100 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:28,084 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:28,807 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:07:28,808 - WARNING - No data for JSE.JO in update
+2025-08-17 16:07:33,089 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:38,085 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:38,859 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:07:38,859 - WARNING - No data for JSE.JO in update
+2025-08-17 16:07:43,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:48,082 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:48,910 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:07:48,910 - WARNING - No data for JSE.JO in update
+2025-08-17 16:07:53,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:58,090 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:07:58,962 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:07:58,963 - WARNING - No data for JSE.JO in update
+2025-08-17 16:08:03,085 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:08,106 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:09,015 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:08:09,016 - WARNING - No data for JSE.JO in update
+2025-08-17 16:08:13,100 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:18,088 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:19,067 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:08:19,068 - WARNING - No data for JSE.JO in update
+2025-08-17 16:08:23,100 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:28,102 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:29,120 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:08:29,121 - WARNING - No data for JSE.JO in update
+2025-08-17 16:08:33,082 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:38,087 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:39,125 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:08:39,125 - WARNING - No data for JSE.JO in update
+2025-08-17 16:08:43,085 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:48,104 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:49,166 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:08:49,167 - WARNING - No data for JSE.JO in update
+2025-08-17 16:08:53,101 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:58,102 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:08:59,218 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:08:59,219 - WARNING - No data for JSE.JO in update
+2025-08-17 16:09:03,087 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:08,087 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:09,270 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:09:09,271 - WARNING - No data for JSE.JO in update
+2025-08-17 16:09:13,099 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:18,105 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:19,283 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:09:19,284 - WARNING - No data for JSE.JO in update
+2025-08-17 16:09:23,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:28,105 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:29,334 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:09:29,334 - WARNING - No data for JSE.JO in update
+2025-08-17 16:09:33,097 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:38,106 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:39,386 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:09:39,387 - WARNING - No data for JSE.JO in update
+2025-08-17 16:09:43,099 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:48,102 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:49,437 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:09:49,438 - WARNING - No data for JSE.JO in update
+2025-08-17 16:09:53,096 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:58,087 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:09:59,488 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:09:59,489 - WARNING - No data for JSE.JO in update
+2025-08-17 16:10:03,095 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:08,101 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:09,541 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:10:09,542 - WARNING - No data for JSE.JO in update
+2025-08-17 16:10:13,095 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:18,103 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:19,592 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:10:19,593 - WARNING - No data for JSE.JO in update
+2025-08-17 16:10:23,097 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:28,101 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:29,643 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:10:29,644 - WARNING - No data for JSE.JO in update
+2025-08-17 16:10:33,097 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:38,103 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:39,695 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:10:39,697 - WARNING - No data for JSE.JO in update
+2025-08-17 16:10:43,096 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:48,103 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:49,747 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:10:49,748 - WARNING - No data for JSE.JO in update
+2025-08-17 16:10:53,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:58,102 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:10:59,766 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:10:59,767 - WARNING - No data for JSE.JO in update
+2025-08-17 16:11:03,097 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:08,105 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:09,821 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:11:09,822 - WARNING - No data for JSE.JO in update
+2025-08-17 16:11:13,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:18,101 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:19,872 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:11:19,873 - WARNING - No data for JSE.JO in update
+2025-08-17 16:11:23,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:28,103 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:29,923 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:11:29,924 - WARNING - No data for JSE.JO in update
+2025-08-17 16:11:33,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:38,102 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:39,944 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:11:39,945 - WARNING - No data for JSE.JO in update
+2025-08-17 16:11:43,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:48,104 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:49,998 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:11:50,000 - WARNING - No data for JSE.JO in update
+2025-08-17 16:11:53,095 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:11:58,104 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:00,050 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:12:00,051 - WARNING - No data for JSE.JO in update
+2025-08-17 16:12:03,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:08,102 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:10,061 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:12:10,062 - WARNING - No data for JSE.JO in update
+2025-08-17 16:12:13,094 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:18,103 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:20,112 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:12:20,112 - WARNING - No data for JSE.JO in update
+2025-08-17 16:12:23,093 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:28,106 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:30,163 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:12:30,164 - WARNING - No data for JSE.JO in update
+2025-08-17 16:12:33,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:38,104 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:40,170 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:12:40,170 - WARNING - No data for JSE.JO in update
+2025-08-17 16:12:43,092 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:48,103 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:12:50,223 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:12:50,225 - WARNING - No data for JSE.JO in update
+2025-08-17 16:39:21,993 - INFO - Initialized QApplication with platform xcb
+2025-08-17 16:39:22,319 - INFO - System tray and app initialized with dips.png
+2025-08-17 16:39:22,338 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 16:39:22,367 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 16:39:22,370 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-17 16:39:22,682 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:39:22,691 - INFO - DataWorker thread started
+2025-08-17 16:39:22,987 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:22,988 - INFO - MainWindow displayed
+2025-08-17 16:39:23,005 - WARNING - No data for JSE.JO in update
+2025-08-17 16:39:27,940 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:39:29,913 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:29,913 - WARNING - No data available for JSE.JO in details dialog
+2025-08-17 16:39:33,020 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:33,021 - WARNING - No data for JSE.JO in update
+2025-08-17 16:39:33,080 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:39:39,417 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:39:40,502 - INFO - Synced watchlist and settings to cloud_sync.json
+2025-08-17 16:39:40,503 - INFO - Saved watchlist to watchlist.json
+2025-08-17 16:39:40,503 - INFO - Added ticker NED.JO to watchlist
+2025-08-17 16:39:43,032 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:43,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:39:43,131 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:43,132 - WARNING - No data for JSE.JO in update
+2025-08-17 16:39:43,132 - WARNING - No data for NED.JO in update
+2025-08-17 16:39:48,084 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:39:50,404 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:50,405 - WARNING - No data available for JSE.JO in details dialog
+2025-08-17 16:39:52,575 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:52,576 - WARNING - No data available for JSE.JO in details dialog
+2025-08-17 16:39:53,081 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:39:53,143 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:53,144 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:53,145 - WARNING - No data for JSE.JO in update
+2025-08-17 16:39:53,145 - WARNING - No data for NED.JO in update
+2025-08-17 16:39:53,737 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:39:53,737 - WARNING - No data available for NED.JO in details dialog
+2025-08-17 16:39:58,083 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:40:03,084 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:40:03,156 - ERROR - Failed to process cache for JSE.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:40:03,158 - ERROR - Failed to process cache for NED.JO: Invalid file path or buffer object type: <class 'dict'>
+2025-08-17 16:40:03,159 - WARNING - No data for JSE.JO in update
+2025-08-17 16:40:03,159 - WARNING - No data for NED.JO in update
+2025-08-17 16:40:08,082 - ERROR - Failed to update logs: type object 'QTextCursor' has no attribute 'End'
+2025-08-17 16:40:08,467 - INFO - Application minimized to system tray
