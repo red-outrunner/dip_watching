@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QHBoxLayout
 )
 from PyQt6.QtCore import QTimer, Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QKeySequence, QAction
+from PyQt6.QtGui import QColor, QIcon, QKeySequence, QAction, QTextCursor
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
@@ -91,7 +91,6 @@ class DipWatcher:
         rsi_period: int = 14,
         csv_file: str = "dip_alerts.csv",
         volume_multipliers: Dict[str, float] = None,
-        indicators: Dict[str, bool] = None
     ):
         self.tickers = [self._format_ticker(t) for t in tickers]
         self.dip_threshold = dip_threshold
@@ -100,7 +99,6 @@ class DipWatcher:
         self.rsi_period = rsi_period
         self.csv_file = Path(csv_file)
         self.volume_multipliers = volume_multipliers or {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7}
-        self.indicators = indicators or {'rsi': True, 'macd': True, 'vwap': True}
         self.cache_dir = Path("cache")
         self.cache_dir.mkdir(exist_ok=True)
         self._init_csv()
@@ -203,12 +201,16 @@ class DipWatcher:
                 change_pct = ((last_price - prev_close) / prev_close * 100) if prev_close else 0.0
 
                 hist = tk.history(period="3mo", interval="1d")
-                if hist.empty or len(hist) < max(self.lookback_periods) or len(hist) < self.rsi_period or len(hist) < 26:  # 26 for MACD
+                if hist.empty or len(hist) < max(self.lookback_periods) or len(hist) < self.rsi_period:
                     raise ValueError("Insufficient historical data")
+
+                # Serialize hist with string keys for timestamps
+                hist_dict = hist.to_dict(orient='index')
+                hist_serializable = {k.isoformat(): v for k, v in hist_dict.items()}
 
                 cache_data = {
                     'info': info,
-                    'history': hist.to_dict(),
+                    'history': hist_serializable,
                     'timestamp': datetime.utcnow().isoformat()
                 }
                 try:
@@ -235,9 +237,10 @@ class DipWatcher:
         else:
             try:
                 info = cache_data.get('info', {})
-                hist_data = cache_data.get('history', {})
-                hist = pd.DataFrame(hist_data)
-                if hist.empty or len(hist) < max(self.lookback_periods) or len(hist) < self.rsi_period or len(hist) < 26:
+                hist_serializable = cache_data.get('history', {})
+                hist = pd.DataFrame.from_dict(hist_serializable, orient='index')
+                hist.index = pd.to_datetime(hist.index)
+                if hist.empty or len(hist) < max(self.lookback_periods) or len(hist) < self.rsi_period:
                     logger.error(f"Invalid cache data for {symbol}: insufficient history")
                     return None
                 last_price = info.get('currentPrice') or info.get('regularMarketPrice')
@@ -289,13 +292,11 @@ class DipWatcher:
 
         # Calculate technical indicators
         try:
-            rsi = self._calculate_rsi(hist["Close"]) if self.indicators['rsi'] else None
+            rsi = self._calculate_rsi(hist["Close"])
             bb_upper, bb_lower = self._calculate_bollinger_bands(hist["Close"])
             fib_levels = self._calculate_fibonacci_retracements(hist["Close"])
             sentiment_score = self._calculate_sentiment(symbol)
             dip_probability = self._calculate_dip_probability(dip_pct)
-            macd, signal, hist = self._calculate_macd(hist["Close"]) if self.indicators['macd'] else (None, None, None)
-            vwap = self._calculate_vwap(hist) if self.indicators['vwap'] else None
         except Exception as e:
             logger.error(f"Failed to calculate indicators for {symbol}: {str(e)}")
             return None
@@ -339,11 +340,7 @@ class DipWatcher:
             'bb_lower': bb_lower,
             'fib_levels': fib_levels,
             'sentiment_score': sentiment_score,
-            'dip_probability': dip_probability,
-            'macd': macd,
-            'macd_signal': signal,
-            'macd_hist': hist,
-            'vwap': vwap
+            'dip_probability': dip_probability
         }
 
     def _calculate_rsi(self, prices: pd.Series, period: int = None) -> float:
@@ -392,27 +389,6 @@ class DipWatcher:
             logger.error(f"Failed to calculate Fibonacci retracements: {str(e)}")
             return {}
 
-    def _calculate_macd(self, prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        try:
-            exp1 = prices.ewm(span=fast, adjust=False).mean()
-            exp2 = prices.ewm(span=slow, adjust=False).mean()
-            macd = exp1 - exp2
-            signal_line = macd.ewm(span=signal, adjust=False).mean()
-            hist = macd - signal_line
-            return macd, signal_line, hist
-        except Exception as e:
-            logger.error(f"Failed to calculate MACD: {str(e)}")
-            return None, None, None
-
-    def _calculate_vwap(self, data: pd.DataFrame) -> pd.Series:
-        try:
-            typical_price = (data['High'] + data['Low'] + data['Close']) / 3
-            vwap = (typical_price * data['Volume']).cumsum() / data['Volume'].cumsum()
-            return vwap
-        except Exception as e:
-            logger.error(f"Failed to calculate VWAP: {str(e)}")
-            return None
-
     def _calculate_sentiment(self, symbol: str) -> float:
         try:
             mock_news = {
@@ -448,8 +424,6 @@ class StockDetailsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(f"Details for {data['symbol']} ({data['exchange']})")
         self.setGeometry(200, 200, 800, 600)
-        self.data = data
-        self.parent = parent
 
         layout = QVBoxLayout()
         currency = data['currency']
@@ -462,14 +436,9 @@ class StockDetailsDialog(QDialog):
             f"Dip %: {data['dip_pct']:.2%}\n"
             f"Volume: {data['volume']:,}\n"
             f"Avg Volume (20d): {data['avg_volume']:,.0f}\n"
+            f"RSI (Period {parent.watcher.rsi_period}): {data['rsi']:.2f}\n"
+            f"Sentiment Score: {data['sentiment_score']:.2f}\n"
         )
-        if parent.watcher.indicators['rsi'] and data['rsi'] is not None:
-            details += f"RSI (Period {parent.watcher.rsi_period}): {data['rsi']:.2f}\n"
-        if parent.watcher.indicators['macd'] and data['macd'] is not None:
-            details += f"MACD: {data['macd'].iloc[-1]:.2f} (Signal: {data['macd_signal'].iloc[-1]:.2f})\n"
-        if parent.watcher.indicators['vwap'] and data['vwap'] is not None:
-            details += f"VWAP: {currency}{data['vwap'].iloc[-1] / (100 if data['exchange'] == 'JSE' else 1):.2f}\n"
-        details += f"Sentiment Score: {data['sentiment_score']:.2f}\n"
         for period, value in data['smas'].items():
             details += f"{period}: {currency}{value:.2f}\n"
         for level, price in data['fib_levels'].items():
@@ -478,132 +447,52 @@ class StockDetailsDialog(QDialog):
         label = QLabel(details)
         layout.addWidget(label)
 
-        # Indicator toggle checkboxes
-        indicator_layout = QHBoxLayout()
-        self.rsi_check = QCheckBox("RSI")
-        self.rsi_check.setChecked(parent.watcher.indicators['rsi'])
-        self.rsi_check.stateChanged.connect(self.update_indicators)
-        indicator_layout.addWidget(self.rsi_check)
-
-        self.macd_check = QCheckBox("MACD")
-        self.macd_check.setChecked(parent.watcher.indicators['macd'])
-        self.macd_check.stateChanged.connect(self.update_indicators)
-        indicator_layout.addWidget(self.macd_check)
-
-        self.vwap_check = QCheckBox("VWAP")
-        self.vwap_check.setChecked(parent.watcher.indicators['vwap'])
-        self.vwap_check.stateChanged.connect(self.update_indicators)
-        indicator_layout.addWidget(self.vwap_check)
-
-        layout.addLayout(indicator_layout)
-
         # Plotly chart
-        self.chart = QWebEngineView()
-        self.update_chart()
-        layout.addWidget(self.chart)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-
-        self.setLayout(layout)
-
-    def update_indicators(self):
-        try:
-            self.parent.watcher.indicators['rsi'] = self.rsi_check.isChecked()
-            self.parent.watcher.indicators['macd'] = self.macd_check.isChecked()
-            self.parent.watcher.indicators['vwap'] = self.vwap_check.isChecked()
-            self.parent.save_settings()
-            logger.info(f"Updated indicators: {self.parent.watcher.indicators}")
-
-            # Update data with new indicator settings
-            self.data = self.parent.watcher.get_stock_data(self.data['symbol'])
-            currency = self.data['currency']
-            details = (
-                f"Exchange: {self.data['exchange']}\n"
-                f"Last Price: {currency}{self.data['last_price']:.2f}\n"
-                f"Bid: {currency}{self.data['bid']:.2f}\n"
-                f"Ask: {currency}{self.data['ask']:.2f}\n"
-                f"Spread: {self.data['spread']:.2%}\n"
-                f"Dip %: {self.data['dip_pct']:.2%}\n"
-                f"Volume: {self.data['volume']:,}\n"
-                f"Avg Volume (20d): {self.data['avg_volume']:,.0f}\n"
-            )
-            if self.parent.watcher.indicators['rsi'] and self.data['rsi'] is not None:
-                details += f"RSI (Period {self.parent.watcher.rsi_period}): {self.data['rsi']:.2f}\n"
-            if self.parent.watcher.indicators['macd'] and self.data['macd'] is not None:
-                details += f"MACD: {self.data['macd'].iloc[-1]:.2f} (Signal: {self.data['macd_signal'].iloc[-1]:.2f})\n"
-            if self.parent.watcher.indicators['vwap'] and self.data['vwap'] is not None:
-                details += f"VWAP: {currency}{self.data['vwap'].iloc[-1] / (100 if self.data['exchange'] == 'JSE' else 1):.2f}\n"
-            details += f"Sentiment Score: {self.data['sentiment_score']:.2f}\n"
-            for period, value in self.data['smas'].items():
-                details += f"{period}: {currency}{value:.2f}\n"
-            for level, price in self.data['fib_levels'].items():
-                details += f"Fibonacci {level}: {currency}{price:.2f}\n"
-
-            self.layout().itemAt(0).widget().setText(details)
-            self.update_chart()
-        except Exception as e:
-            logger.error(f"Failed to update indicators: {str(e)}")
-
-    def update_chart(self):
         try:
             fig = make_subplots(
-                rows=4, cols=1,
-                subplot_titles=("Price and Technicals", "Volume", "Dip Probability Heatmap", "MACD" if self.parent.watcher.indicators['macd'] else ""),
-                row_heights=[0.4, 0.2, 0.1, 0.3],
+                rows=3, cols=1,
+                subplot_titles=("Price and Technicals", "Volume", "Dip Probability Heatmap"),
+                row_heights=[0.5, 0.3, 0.2],
                 vertical_spacing=0.1
             )
 
-            hist = self.data['history']
+            hist = data['history']
             if not hist.empty:
                 # Adjust history for JSE if needed
                 close_prices = hist['Close']
-                if self.data['exchange'] == 'JSE':
+                if data['exchange'] == 'JSE':
                     close_prices = close_prices / 100
-                # Price chart with SMAs, Bollinger Bands, Fibonacci, VWAP
+                # Price chart with SMAs, Bollinger Bands, Fibonacci
                 fig.add_trace(go.Scatter(x=hist.index, y=close_prices, name='Price', line=dict(color='blue')), row=1, col=1)
-                for period, value in self.data['smas'].items():
+                for period, value in data['smas'].items():
                     sma_series = hist['Close'].rolling(window=int(period.split('_')[1])).mean()
-                    if self.data['exchange'] == 'JSE':
+                    if data['exchange'] == 'JSE':
                         sma_series = sma_series / 100
                     fig.add_trace(go.Scatter(x=hist.index, y=sma_series, name=period, line=dict(dash='dash')), row=1, col=1)
-                bb_upper = self.data['bb_upper']
-                bb_lower = self.data['bb_lower']
-                if self.data['exchange'] == 'JSE':
+                bb_upper = data['bb_upper']
+                bb_lower = data['bb_lower']
+                if data['exchange'] == 'JSE':
                     bb_upper = bb_upper / 100
                     bb_lower = bb_lower / 100
                 fig.add_trace(go.Scatter(x=hist.index, y=bb_upper, name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
                 fig.add_trace(go.Scatter(x=hist.index, y=bb_lower, name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
-                for level, price in self.data['fib_levels'].items():
-                    fib_price = price / 100 if self.data['exchange'] == 'JSE' else price
+                for level, price in data['fib_levels'].items():
+                    fib_price = price / 100 if data['exchange'] == 'JSE' else price
                     fig.add_hline(y=fib_price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
-                if self.parent.watcher.indicators['vwap'] and self.data['vwap'] is not None:
-                    vwap_series = self.data['vwap']
-                    if self.data['exchange'] == 'JSE':
-                        vwap_series = vwap_series / 100
-                    fig.add_trace(go.Scatter(x=hist.index, y=vwap_series, name='VWAP', line=dict(color='purple', dash='dot')), row=1, col=1)
                 
                 # Volume chart
                 fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volume'), row=2, col=1)
-                fig.add_hline(y=self.data['avg_volume'], line_dash="dash", line_color="red", annotation_text="Avg Volume", row=2, col=1)
+                fig.add_hline(y=data['avg_volume'], line_dash="dash", line_color="red", annotation_text="Avg Volume", row=2, col=1)
                 
                 # Dip probability heatmap
-                heatmap_data = [[self.data['dip_probability']]]
+                heatmap_data = [[data['dip_probability']]]
                 fig.add_trace(go.Heatmap(z=heatmap_data, colorscale='RdYlGn', showscale=True, zmin=0, zmax=1), row=3, col=1)
 
-                # MACD chart
-                if self.parent.watcher.indicators['macd'] and self.data['macd'] is not None:
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd'], name='MACD', line=dict(color='blue')), row=4, col=1)
-                    fig.add_trace(go.Scatter(x=hist.index, y=self.data['macd_signal'], name='Signal', line=dict(color='orange')), row=4, col=1)
-                    fig.add_trace(go.Bar(x=hist.index, y=self.data['macd_hist'], name='Histogram'), row=4, col=1)
-
                 fig.update_layout(
-                    height=600,
+                    height=500,
                     showlegend=True,
-                    title_text=f"Analysis for {self.data['symbol']} ({self.data['exchange']})",
-                    template='plotly_dark' if self.parent.is_dark_mode else 'plotly'
+                    title_text=f"Analysis for {data['symbol']} ({data['exchange']})",
+                    template='plotly_dark' if parent.is_dark_mode else 'plotly'
                 )
                 fig.update_xaxes(title_text="Date", row=1, col=1)
                 fig.update_yaxes(title_text=f"Price ({currency})", row=1, col=1)
@@ -611,14 +500,20 @@ class StockDetailsDialog(QDialog):
                 fig.update_yaxes(title_text="Volume", row=2, col=1)
                 fig.update_xaxes(showticklabels=False, row=3, col=1)
                 fig.update_yaxes(showticklabels=False, row=3, col=1)
-                if self.parent.watcher.indicators['macd']:
-                    fig.update_xaxes(title_text="Date", row=4, col=1)
-                    fig.update_yaxes(title_text="MACD", row=4, col=1)
 
-            self.chart.setHtml(fig.to_html(include_plotlyjs='cdn'))
+            chart = QWebEngineView()
+            chart.setHtml(fig.to_html(include_plotlyjs='cdn'))
+            layout.addWidget(chart)
         except Exception as e:
-            logger.error(f"Failed to render Plotly chart for {self.data['symbol']}: {str(e)}")
-            self.chart.setHtml("<p>Error rendering chart. Check dip_watcher.log for details.</p>")
+            logger.error(f"Failed to render Plotly chart for {data['symbol']}: {str(e)}")
+            layout.addWidget(QLabel("Error rendering chart. Check dip_watcher.log for details."))
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self.setLayout(layout)
 
 
 class MainWindow(QMainWindow):
@@ -657,17 +552,10 @@ class MainWindow(QMainWindow):
             lookback_periods=tuple(settings.get('lookback_periods', [5, 20])),
             rsi_period=settings.get('rsi_period', 14),
             csv_file="dip_alerts.csv",
-            volume_multipliers=settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7}),
-            indicators=settings.get('indicators', {'rsi': True, 'macd': True, 'vwap': True})
+            volume_multipliers=settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7})
         )
         self.watchlist: List[Dict] = self.load_watchlist()
 
-        # Tab widget for Watchlist and Logs
-        self.tabs = QTabWidget()
-        self.watchlist_widget = QWidget()
-        self.logs_widget = QWidget()
-
-        # Watchlist tab
         columns = ['Ticker', 'Last Price', 'Change %', 'Dip %', 'Volume', 'SMA 5', 'SMA 20', 'Target Price', 'Status']
         self.table = QTableWidget(len(self.watchlist), len(columns))
         self.table.setHorizontalHeaderLabels(columns)
@@ -683,30 +571,6 @@ class MainWindow(QMainWindow):
             target_item = QTableWidgetItem(str(stock['target']) if stock['target'] is not None else "")
             target_item.setFlags(Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled)
             self.table.setItem(i, 7, target_item)
-
-        # Logs tab
-        logs_layout = QVBoxLayout()
-        self.log_filter = QLineEdit()
-        self.log_filter.setPlaceholderText("Filter logs (e.g., ERROR, NED.JO)")
-        self.log_filter.textChanged.connect(self.update_logs)
-        logs_layout.addWidget(self.log_filter)
-        self.log_display = QTextEdit()
-        self.log_display.setReadOnly(True)
-        logs_layout.addWidget(self.log_display)
-        self.logs_widget.setLayout(logs_layout)
-
-        # Initialize logs
-        self.update_logs()
-        self.log_timer = QTimer()
-        self.log_timer.timeout.connect(self.update_logs)
-        self.log_timer.start(5000)  # Update every 5 seconds
-
-        watchlist_layout = QVBoxLayout()
-        watchlist_layout.addWidget(self.table)
-        self.watchlist_widget.setLayout(watchlist_layout)
-
-        self.tabs.addTab(self.watchlist_widget, "Watchlist")
-        self.tabs.addTab(self.logs_widget, "Logs")
 
         add_btn = QPushButton("Add Ticker")
         add_btn.clicked.connect(self.add_ticker)
@@ -734,7 +598,7 @@ class MainWindow(QMainWindow):
         sync_btn.clicked.connect(self.sync_to_cloud)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.tabs)
+        layout.addWidget(self.table)
         button_layout = QVBoxLayout()
         button_layout.addWidget(add_btn)
         button_layout.addWidget(import_btn)
@@ -768,29 +632,22 @@ class MainWindow(QMainWindow):
     def _get_stylesheet(self) -> str:
         base_style = """
             QMainWindow, QDialog { font-size: 14px; }
-            QTableWidget, QTextEdit, QLineEdit { font-size: 12px; }
+            QTableWidget { font-size: 12px; }
             QPushButton { padding: 5px; font-size: 12px; }
-            QLabel, QCheckBox { font-size: 12px; }
-            QTabWidget::pane { border: 1px solid #888888; }
+            QLabel { font-size: 12px; }
         """
         if self.is_dark_mode:
             return base_style + """
                 QMainWindow, QDialog { background-color: #2b2b2b; color: #ffffff; }
-                QTableWidget, QTextEdit, QLineEdit { background-color: #333333; color: #ffffff; }
+                QTableWidget { background-color: #333333; color: #ffffff; }
                 QPushButton { background-color: #444444; color: #ffffff; }
                 QCheckBox { color: #ffffff; }
-                QTabWidget::pane { border-color: #555555; }
-                QTabBar::tab { background: #333333; color: #ffffff; }
-                QTabBar::tab:selected { background: #555555; }
             """
         return base_style + """
             QMainWindow, QDialog { background-color: #ffffff; color: #000000; }
-            QTableWidget, QTextEdit, QLineEdit { background-color: #f0f0f0; color: #000000; }
+            QTableWidget { background-color: #f0f0f0; color: #000000; }
             QPushButton { background-color: #e0e0e0; color: #000000; }
             QCheckBox { color: #000000; }
-            QTabWidget::pane { border-color: #cccccc; }
-            QTabBar::tab { background: #e0e0e0; color: #000000; }
-            QTabBar::tab:selected { background: #cccccc; }
         """
 
     def toggle_dark_mode(self, state):
@@ -818,8 +675,7 @@ class MainWindow(QMainWindow):
                         'volume_multipliers': {
                             k: float(v) for k, v in settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7}).items()
                         },
-                        'dark_mode': bool(settings.get('dark_mode', False)),
-                        'indicators': settings.get('indicators', {'rsi': True, 'macd': True, 'vwap': True})
+                        'dark_mode': bool(settings.get('dark_mode', False))
                     }
             return {
                 'dip_threshold': 0.15,
@@ -828,8 +684,7 @@ class MainWindow(QMainWindow):
                 'rsi_period': 14,
                 'interval': 10,
                 'volume_multipliers': {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7},
-                'dark_mode': False,
-                'indicators': {'rsi': True, 'macd': True, 'vwap': True}
+                'dark_mode': False
             }
         except Exception as e:
             logger.error(f"Failed to load settings: {str(e)}")
@@ -840,8 +695,7 @@ class MainWindow(QMainWindow):
                 'rsi_period': 14,
                 'interval': 10,
                 'volume_multipliers': {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7},
-                'dark_mode': False,
-                'indicators': {'rsi': True, 'macd': True, 'vwap': True}
+                'dark_mode': False
             }
 
     def save_settings(self) -> None:
@@ -854,28 +708,10 @@ class MainWindow(QMainWindow):
                     'rsi_period': self.watcher.rsi_period,
                     'interval': self.interval // 1000,
                     'volume_multipliers': self.watcher.volume_multipliers,
-                    'dark_mode': self.is_dark_mode,
-                    'indicators': self.watcher.indicators
+                    'dark_mode': self.is_dark_mode
                 }, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save settings: {str(e)}")
-
-    def update_logs(self):
-        try:
-            log_file = Path('dip_watcher.log')
-            filter_text = self.log_filter.text().lower()
-            if log_file.exists():
-                with log_file.open('r') as f:
-                    lines = f.readlines()[-1000:]  # Last 1000 lines
-                    if filter_text:
-                        lines = [line for line in lines if filter_text in line.lower()]
-                    self.log_display.setText(''.join(lines))
-                    self.log_display.moveCursor(Qt.TextCursor.MoveOperation.End)
-            else:
-                self.log_display.setText("No logs available.")
-        except Exception as e:
-            logger.error(f"Failed to update logs: {str(e)}")
-            self.log_display.setText("Error reading logs. Check dip_watcher.log for details.")
 
     def load_watchlist(self) -> List[Dict]:
         try:
@@ -1192,9 +1028,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'worker'):
             self.worker.stop()
             logger.info("DataWorker thread stopped")
-        if hasattr(self, 'log_timer'):
-            self.log_timer.stop()
-            logger.info("Log timer stopped")
 
 
 if __name__ == "__main__":

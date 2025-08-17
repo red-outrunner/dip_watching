@@ -152,3 +152,11 @@
 2025-08-17 15:30:24,118 - ERROR - Failed to update logs: type object 'Qt' has no attribute 'TextCursor'
 2025-08-17 15:30:25,012 - INFO - Application minimized to system tray
 2025-08-17 15:30:27,792 - ERROR - Failed to read cache for NED.JO: Expecting property name enclosed in double quotes: line 1 column 8159 (char 8158)
+2025-08-17 15:36:40,048 - INFO - Initialized QApplication with platform xcb
+2025-08-17 15:36:40,363 - INFO - System tray and app initialized with dips.png
+2025-08-17 15:36:40,365 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 15:36:40,391 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-17 15:36:40,392 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-17 15:36:40,472 - INFO - DataWorker thread started
+2025-08-17 15:36:40,609 - INFO - MainWindow displayed
+2025-08-17 15:52:17,039 - INFO - Application minimized to system tray
