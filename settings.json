@@ -5,11 +5,12 @@
     5,
     20
   ],
+  "rsi_period": 14,
   "interval": 10,
   "volume_multipliers": {
     "US": 0.8,
     "JSE": 0.5,
     "LSE": 0.7
   },
-  "dark_mode": true
+  "dark_mode": false
 }

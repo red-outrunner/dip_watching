@@ -2,5 +2,9 @@
   {
     "ticker": "NED.JO",
     "target": 230.0
+  },
+  {
+    "ticker": "JSE.JO",
+    "target": null
   }
 ]
