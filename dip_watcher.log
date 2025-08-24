@@ -758,3 +758,11 @@
 2025-08-24 11:26:50,049 - INFO - DataWorker thread started
 2025-08-24 11:26:50,158 - INFO - MainWindow displayed
 2025-08-24 11:29:18,973 - INFO - Application minimized to system tray
+2025-08-24 12:35:26,259 - INFO - Initialized QApplication with platform xcb
+2025-08-24 12:35:26,587 - INFO - System tray and app initialized with dips.png
+2025-08-24 12:35:26,597 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 12:35:26,598 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 12:35:26,600 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-24 12:35:26,975 - INFO - DataWorker thread started
+2025-08-24 12:35:27,200 - INFO - MainWindow displayed
+2025-08-24 12:51:18,101 - INFO - Application minimized to system tray
