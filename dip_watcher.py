@@ -425,29 +425,71 @@ class StockDetailsDialog(QDialog):
         self.setWindowTitle(f"Details for {data['symbol']} ({data['exchange']})")
         self.setGeometry(200, 200, 800, 600)
 
+        # Create layout
         layout = QVBoxLayout()
+
+        # --- COLLAPSIBLE DETAILS ---
+        self.details_widget = QWidget()
+        self.details_layout = QVBoxLayout(self.details_widget)
+        self.details_layout.setSpacing(5)
+        self.details_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Title for details
+        title_label = QLabel("Stock Details")
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt;")
+        self.details_layout.addWidget(title_label)
+
+        # Add compact info in two columns
+        info_layout = QHBoxLayout()
+        left_col = QVBoxLayout()
+        right_col = QVBoxLayout()
+
         currency = data['currency']
-        details = (
-            f"Exchange: {data['exchange']}\n"
-            f"Last Price: {currency}{data['last_price']:.2f}\n"
-            f"Bid: {currency}{data['bid']:.2f}\n"
-            f"Ask: {currency}{data['ask']:.2f}\n"
-            f"Spread: {data['spread']:.2%}\n"
-            f"Dip %: {data['dip_pct']:.2%}\n"
-            f"Volume: {data['volume']:,}\n"
-            f"Avg Volume (20d): {data['avg_volume']:,.0f}\n"
-            f"RSI (Period {parent.watcher.rsi_period}): {data['rsi']:.2f}\n"
-            f"Sentiment Score: {data['sentiment_score']:.2f}\n"
-        )
+        info_items = [
+            ("Exchange", data['exchange']),
+            ("Last Price", f"{currency}{data['last_price']:.2f}"),
+            ("Bid", f"{currency}{data['bid']:.2f}"),
+            ("Ask", f"{currency}{data['ask']:.2f}"),
+            ("Spread", f"{data['spread']:.2%}"),
+            ("Dip %", f"{data['dip_pct']:.2%}"),
+            ("Volume", f"{data['volume']:,}"),
+            ("Avg Volume", f"{data['avg_volume']:,.0f}"),
+            ("RSI", f"{data['rsi']:.2f}"),
+            ("Sentiment", f"{data['sentiment_score']:.2f}"),
+        ]
+
+        for label, value in info_items:
+            row = QHBoxLayout()
+            row.addWidget(QLabel(label + ":"))
+            row.addWidget(QLabel(value))
+            left_col.addLayout(row)
+
+        # Add SMAs and Fibs in right column
         for period, value in data['smas'].items():
-            details += f"{period}: {currency}{value:.2f}\n"
+            row = QHBoxLayout()
+            row.addWidget(QLabel(period + ":"))
+            row.addWidget(QLabel(f"{currency}{value:.2f}"))
+            right_col.addLayout(row)
+
         for level, price in data['fib_levels'].items():
-            details += f"Fibonacci {level}: {currency}{price:.2f}\n"
+            row = QHBoxLayout()
+            row.addWidget(QLabel(f"Fib {level}:"))
+            row.addWidget(QLabel(f"{currency}{price:.2f}"))
+            right_col.addLayout(row)
 
-        label = QLabel(details)
-        layout.addWidget(label)
+        info_layout.addLayout(left_col)
+        info_layout.addLayout(right_col)
+        self.details_layout.addLayout(info_layout)
 
-        # Plotly chart
+        # Toggle button to collapse/expand
+        self.toggle_btn = QPushButton("▶ Minimize Details")
+        self.toggle_btn.clicked.connect(self.toggle_details)
+        self.details_layout.addWidget(self.toggle_btn)
+
+        # Add details widget to main layout
+        layout.addWidget(self.details_widget)
+
+        # --- CHART ---
         try:
             fig = make_subplots(
                 rows=3, cols=1,
@@ -455,36 +497,34 @@ class StockDetailsDialog(QDialog):
                 row_heights=[0.5, 0.3, 0.2],
                 vertical_spacing=0.1
             )
-
             hist = data['history']
             if not hist.empty:
-                # Adjust history for JSE if needed
                 close_prices = hist['Close']
                 if data['exchange'] == 'JSE':
                     close_prices = close_prices / 100
-                # Price chart with SMAs, Bollinger Bands, Fibonacci
+
+                # Price chart
                 fig.add_trace(go.Scatter(x=hist.index, y=close_prices, name='Price', line=dict(color='blue')), row=1, col=1)
                 for period, value in data['smas'].items():
                     sma_series = hist['Close'].rolling(window=int(period.split('_')[1])).mean()
                     if data['exchange'] == 'JSE':
                         sma_series = sma_series / 100
                     fig.add_trace(go.Scatter(x=hist.index, y=sma_series, name=period, line=dict(dash='dash')), row=1, col=1)
-                bb_upper = data['bb_upper']
-                bb_lower = data['bb_lower']
+                bb_upper, bb_lower = data['bb_upper'], data['bb_lower']
                 if data['exchange'] == 'JSE':
-                    bb_upper = bb_upper / 100
-                    bb_lower = bb_lower / 100
+                    bb_upper /= 100
+                    bb_lower /= 100
                 fig.add_trace(go.Scatter(x=hist.index, y=bb_upper, name='BB Upper', line=dict(color='gray', dash='dot')), row=1, col=1)
                 fig.add_trace(go.Scatter(x=hist.index, y=bb_lower, name='BB Lower', line=dict(color='gray', dash='dot')), row=1, col=1)
                 for level, price in data['fib_levels'].items():
                     fib_price = price / 100 if data['exchange'] == 'JSE' else price
                     fig.add_hline(y=fib_price, line_dash="dash", annotation_text=f"Fib {level}", row=1, col=1)
-                
-                # Volume chart
+
+                # Volume
                 fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volume'), row=2, col=1)
                 fig.add_hline(y=data['avg_volume'], line_dash="dash", line_color="red", annotation_text="Avg Volume", row=2, col=1)
-                
-                # Dip probability heatmap
+
+                # Dip heatmap
                 heatmap_data = [[data['dip_probability']]]
                 fig.add_trace(go.Heatmap(z=heatmap_data, colorscale='RdYlGn', showscale=True, zmin=0, zmax=1), row=3, col=1)
 
@@ -508,13 +548,26 @@ class StockDetailsDialog(QDialog):
             logger.error(f"Failed to render Plotly chart for {data['symbol']}: {str(e)}")
             layout.addWidget(QLabel("Error rendering chart. Check dip_watcher.log for details."))
 
+        # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
         self.setLayout(layout)
+        self.resize(800, 600)
+        self.toggle_details()  # Start minimized
 
+    def toggle_details(self):
+        if self.details_widget.isVisible():
+            self.details_widget.hide()
+            self.toggle_btn.setText("▼ Expand Details")
+        else:
+            self.details_widget.show()
+            self.toggle_btn.setText("▶ Minimize Details")
+
+        # Resize dialog to fit content
+        self.adjustSize()
 
 class MainWindow(QMainWindow):
     def __init__(self):

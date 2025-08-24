@@ -6,5 +6,9 @@
   {
     "ticker": "NED.JO",
     "target": null
+  },
+  {
+    "ticker": "MTN.JO",
+    "target": null
   }
 ]

@@ -712,3 +712,41 @@
 2025-08-17 16:40:49,336 - ERROR - Failed to process cache for JSE.JO: Unknown datetime string format, unable to parse: Open, at position 0
 2025-08-17 16:40:49,574 - WARNING - No data for JSE.JO in update
 2025-08-17 16:42:40,986 - INFO - Application minimized to system tray
+2025-08-24 10:56:43,015 - INFO - Initialized QApplication with platform xcb
+2025-08-24 10:56:43,448 - INFO - System tray and app initialized with dips.png
+2025-08-24 10:56:43,450 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 10:56:43,450 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 10:56:43,452 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-24 10:56:43,697 - INFO - DataWorker thread started
+2025-08-24 10:56:43,942 - INFO - MainWindow displayed
+2025-08-24 11:05:30,713 - INFO - Application minimized to system tray
+2025-08-24 11:09:02,167 - INFO - Initialized QApplication with platform xcb
+2025-08-24 11:09:02,694 - INFO - System tray and app initialized with dips.png
+2025-08-24 11:09:02,703 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 11:09:02,704 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 11:09:02,706 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-24 11:09:02,966 - INFO - DataWorker thread started
+2025-08-24 11:09:03,061 - INFO - MainWindow displayed
+2025-08-24 11:09:05,539 - ERROR - Failed to show details for NED.JO: name 'QFont' is not defined
+2025-08-24 11:09:10,099 - ERROR - Failed to show details for JSE.JO: name 'QFont' is not defined
+2025-08-24 11:09:14,973 - ERROR - Failed to show details for JSE.JO: name 'QFont' is not defined
+2025-08-24 11:09:34,440 - INFO - Synced watchlist and settings to cloud_sync.json
+2025-08-24 11:09:34,440 - INFO - Saved watchlist to watchlist.json
+2025-08-24 11:09:34,441 - INFO - Added ticker MTN.JO to watchlist
+2025-08-24 11:09:37,164 - ERROR - Failed to show details for NED.JO: name 'QFont' is not defined
+2025-08-24 11:09:48,482 - INFO - Application minimized to system tray
+2025-08-24 11:10:16,577 - INFO - Initialized QApplication with platform xcb
+2025-08-24 11:10:16,583 - INFO - System tray and app initialized with dips.png
+2025-08-24 11:10:16,584 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 11:10:16,584 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 11:10:16,585 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-24 11:10:16,628 - INFO - DataWorker thread started
+2025-08-24 11:10:16,679 - INFO - MainWindow displayed
+2025-08-24 11:16:09,724 - INFO - Initialized QApplication with platform xcb
+2025-08-24 11:16:09,770 - INFO - System tray and app initialized with dips.png
+2025-08-24 11:16:09,771 - ERROR - Failed to load watchlist from cloud: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 11:16:09,772 - ERROR - Failed to load watchlist: 'MainWindow' object has no attribute 'watcher'
+2025-08-24 11:16:09,774 - INFO - Loaded watchlist from cloud_sync.json
+2025-08-24 11:16:09,845 - INFO - DataWorker thread started
+2025-08-24 11:16:09,918 - INFO - MainWindow displayed
+2025-08-24 11:17:53,167 - INFO - Application minimized to system tray
