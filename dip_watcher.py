@@ -7,7 +7,7 @@ Requirements:
 Usage:
     python dip_watcher.py
 On Pop!_OS/KDE, ensure dependencies:
-    sudo apt install libxcb-cursor0 libxcb-xkb1 libxkbcommon-x11-0 xwayland libqt6webenginecore6 libqt6webenginewidgets6 qt6-webengine-dev
+    sudo apt install libxcb-cursor0 libx11-xcb1 libxcb1 libxcb-xkb1 libxkbcommon-x11-0 xwayland libqt6webenginecore6 libqt6webenginewidgets6 qt6-webengine-dev
 Ensure dips.png is in the project directory for the system tray and app icon.
 """
 from __future__ import annotations
@@ -29,10 +29,11 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QPushButton,
     QVBoxLayout, QWidget, QInputDialog, QMessageBox, QHeaderView, QDialog,
     QFileDialog, QDialogButtonBox, QLabel, QCheckBox, QTabWidget, QTextEdit,
-    QLineEdit, QHBoxLayout, QStyle, QTextEdit, QSystemTrayIcon, QMenu
+    QLineEdit, QHBoxLayout, QDoubleSpinBox, QSpinBox, QFormLayout, QGroupBox
 )
 from PyQt6.QtCore import QTimer, Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QKeySequence, QAction, QTextCursor
+from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 # Setup logging with rotation
@@ -44,51 +45,121 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-# --- Helper Dialog for Details ---
-class StockInfoDialog(QDialog):
-    """A simple dialog to display detailed stock information."""
-    def __init__(self, data: Dict, parent=None):
+# --- NEW: Settings Dialog ---
+class SettingsDialog(QDialog):
+    """A dialog for configuring DipWatcher settings."""
+    def __init__(self, watcher: 'DipWatcher', parent_interval: int, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Info for {data['symbol']}")
-        self.setModal(True) # Make it a modal dialog
-        self.resize(400, 300) # Reasonable default size
+        self.watcher = watcher
+        self.parent_interval = parent_interval # Interval in seconds
+        self.setWindowTitle("Dip Watcher Settings")
+        self.setModal(True)
+        self.resize(400, 400) # Adjust size as needed
 
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
 
-        currency = data['currency']
-        details_text = (
-            f"<b>Exchange:</b> {data['exchange']}<br>"
-            f"<b>Last Price:</b> {currency}{data['last_price']:.2f}<br>"
-            f"<b>Bid:</b> {currency}{data['bid']:.2f}<br>"
-            f"<b>Ask:</b> {currency}{data['ask']:.2f}<br>"
-            f"<b>Spread:</b> {data['spread']:.2%}<br>"
-            f"<b>Dip %:</b> {data['dip_pct']:.2%}<br>"
-            f"<b>Volume:</b> {data['volume']:,}<br>"
-            f"<b>Avg Volume (20d):</b> {data['avg_volume']:,.0f}<br>"
-            f"<b>RSI (Period {getattr(parent, 'watcher', None).rsi_period if getattr(parent, 'watcher', None) else 'N/A'}):</b> {data['rsi']:.2f}<br>"
-            f"<b>Sentiment Score:</b> {data['sentiment_score']:.2f}<br>"
-        )
-        # Add SMAs
-        for period, value in data['smas'].items():
-            details_text += f"<b>{period}:</b> {currency}{value:.2f}<br>"
-        # Add Fibonacci Levels
-        for level, price in data['fib_levels'].items():
-            details_text += f"<b>Fibonacci {level}:</b> {currency}{price:.2f}<br>"
+        # --- General Settings Group ---
+        general_group = QGroupBox("General")
+        general_layout = QFormLayout(general_group)
 
-        text_edit = QTextEdit()
-        text_edit.setHtml(details_text)
-        text_edit.setReadOnly(True)
-        layout.addWidget(text_edit)
+        # Dip Threshold
+        self.dip_threshold_spinbox = QDoubleSpinBox()
+        self.dip_threshold_spinbox.setRange(0.0, 1.0)
+        self.dip_threshold_spinbox.setSingleStep(0.01)
+        self.dip_threshold_spinbox.setValue(self.watcher.dip_threshold)
+        self.dip_threshold_spinbox.setDecimals(4) # Allow more precision
+        general_layout.addRow("Dip Threshold (0-1):", self.dip_threshold_spinbox)
 
-        # Add a close button for clarity
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.accept)
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        button_layout.addWidget(close_btn)
-        layout.addLayout(button_layout)
+        # Max Ask Spread
+        self.max_ask_spread_spinbox = QDoubleSpinBox()
+        self.max_ask_spread_spinbox.setRange(0.0, 1.0)
+        self.max_ask_spread_spinbox.setSingleStep(0.001)
+        self.max_ask_spread_spinbox.setValue(self.watcher.max_ask_spread)
+        self.max_ask_spread_spinbox.setDecimals(4)
+        general_layout.addRow("Max Ask Spread (0-1):", self.max_ask_spread_spinbox)
 
-        self.setLayout(layout)
+        # RSI Period
+        self.rsi_period_spinbox = QSpinBox()
+        self.rsi_period_spinbox.setRange(2, 100) # Reasonable range
+        self.rsi_period_spinbox.setValue(self.watcher.rsi_period)
+        general_layout.addRow("RSI Period (2-100):", self.rsi_period_spinbox)
+
+        # Poll Interval
+        self.interval_spinbox = QSpinBox()
+        self.interval_spinbox.setRange(5, 3600) # 5 seconds to 1 hour
+        self.interval_spinbox.setValue(self.parent_interval)
+        self.interval_spinbox.setSuffix(" seconds")
+        general_layout.addRow("Poll Interval:", self.interval_spinbox)
+
+        layout.addWidget(general_group)
+
+        # --- Lookback Periods ---
+        lookback_group = QGroupBox("Lookback Periods")
+        lookback_layout = QVBoxLayout(lookback_group)
+        self.lookback_line_edit = QLineEdit()
+        self.lookback_line_edit.setText(",".join(map(str, self.watcher.lookback_periods)))
+        self.lookback_line_edit.setToolTip("Comma-separated list of periods (e.g., 5,20)")
+        lookback_layout.addWidget(self.lookback_line_edit)
+        layout.addWidget(lookback_group)
+
+        # --- Volume Multipliers ---
+        volume_group = QGroupBox("Volume Multipliers")
+        volume_layout = QFormLayout(volume_group)
+
+        self.us_volume_spinbox = QDoubleSpinBox()
+        self.us_volume_spinbox.setRange(0.0, 5.0)
+        self.us_volume_spinbox.setSingleStep(0.1)
+        self.us_volume_spinbox.setValue(self.watcher.volume_multipliers.get('US', 0.8))
+        volume_layout.addRow("US Multiplier:", self.us_volume_spinbox)
+
+        self.jse_volume_spinbox = QDoubleSpinBox()
+        self.jse_volume_spinbox.setRange(0.0, 5.0)
+        self.jse_volume_spinbox.setSingleStep(0.1)
+        self.jse_volume_spinbox.setValue(self.watcher.volume_multipliers.get('JSE', 0.5))
+        volume_layout.addRow("JSE Multiplier:", self.jse_volume_spinbox)
+
+        self.lse_volume_spinbox = QDoubleSpinBox()
+        self.lse_volume_spinbox.setRange(0.0, 5.0)
+        self.lse_volume_spinbox.setSingleStep(0.1)
+        self.lse_volume_spinbox.setValue(self.watcher.volume_multipliers.get('LSE', 0.7))
+        volume_layout.addRow("LSE Multiplier:", self.lse_volume_spinbox)
+
+        layout.addWidget(volume_group)
+
+        # --- Buttons ---
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+    def get_settings(self) -> Optional[Dict]:
+        """Returns the settings if accepted, None otherwise."""
+        if self.exec() == QDialog.DialogCode.Accepted:
+            try:
+                # Validate Lookback Periods
+                lookback_str = self.lookback_line_edit.text()
+                lookback_periods = tuple(map(int, lookback_str.split(',')))
+                if not lookback_periods or any(p <= 0 for p in lookback_periods):
+                     raise ValueError("Lookback periods must be positive integers.")
+
+                return {
+                    'dip_threshold': self.dip_threshold_spinbox.value(),
+                    'max_ask_spread': self.max_ask_spread_spinbox.value(),
+                    'lookback_periods': lookback_periods,
+                    'rsi_period': self.rsi_period_spinbox.value(),
+                    'interval': self.interval_spinbox.value(), # Return interval in seconds
+                    'volume_multipliers': {
+                        'US': self.us_volume_spinbox.value(),
+                        'JSE': self.jse_volume_spinbox.value(),
+                        'LSE': self.lse_volume_spinbox.value(),
+                    }
+                }
+            except ValueError as e:
+                QMessageBox.critical(self, "Invalid Input", f"Invalid setting value: {e}")
+                logger.error(f"Invalid setting value in SettingsDialog: {e}")
+                return None # Stay in dialog if invalid
+        return None # Rejected or validation failed
+
 
 class DataWorker(QThread):
     data_updated = pyqtSignal(list)
@@ -135,6 +206,7 @@ class DipWatcher:
         self.cache_dir = Path("cache")
         self.cache_dir.mkdir(exist_ok=True)
         self._init_csv()
+
     def _format_ticker(self, ticker: str) -> str:
         ticker = ticker.upper()
         if self._is_jse_stock(ticker):
@@ -144,6 +216,7 @@ class DipWatcher:
             if not ticker.endswith('.L'):
                 ticker += '.L'
         return ticker
+
     def _is_jse_stock(self, ticker: str) -> bool:
         base_ticker = ticker.replace('.JO', '')
         jse_stocks = {
@@ -159,6 +232,7 @@ class DipWatcher:
             'TKG', 'TSG', 'UCT', 'WEQ', 'ZED', 'HIL'
         }
         return base_ticker in jse_stocks
+
     def _is_lse_stock(self, ticker: str) -> bool:
         base_ticker = ticker.replace('.L', '')
         lse_stocks = {
@@ -169,6 +243,7 @@ class DipWatcher:
             'RR', 'IAG', 'EZJ', 'LSEG', 'III', 'ADM', 'SGE', 'EXPN', 'CRDA', 'SPX'
         }
         return base_ticker in lse_stocks
+
     def _init_csv(self) -> None:
         try:
             if not self.csv_file.exists():
@@ -180,6 +255,7 @@ class DipWatcher:
                 self.csv_file.write_text(header)
         except Exception as e:
             logger.error(f"Failed to initialize CSV file {self.csv_file}: {str(e)}")
+
     def validate_ticker(self, ticker: str) -> bool:
         try:
             tk = yf.Ticker(self._format_ticker(ticker))
@@ -188,6 +264,7 @@ class DipWatcher:
         except Exception as e:
             logger.error(f"Failed to validate ticker {ticker}: {str(e)}")
             return False
+
     def get_stock_data(self, symbol: str) -> Optional[Dict]:
         cache_file = self.cache_dir / f"{symbol.replace('.', '_')}.json"
         tk = yf.Ticker(symbol)
@@ -353,6 +430,7 @@ class DipWatcher:
             'sentiment_score': sentiment_score,
             'dip_probability': dip_probability
         }
+
     def _calculate_rsi(self, prices: pd.Series, period: int = None) -> float:
         if period is None:
             period = self.rsi_period
@@ -370,6 +448,7 @@ class DipWatcher:
         except Exception as e:
             logger.error(f"Failed to calculate RSI with period {period}: {str(e)}")
             return 0.0
+
     def _calculate_bollinger_bands(self, prices: pd.Series, period: int = 20, std_dev: float = 2) -> Tuple[np.ndarray, np.ndarray]:
         try:
             sma = prices.rolling(window=period).mean()
@@ -380,6 +459,7 @@ class DipWatcher:
         except Exception as e:
             logger.error(f"Failed to calculate Bollinger Bands: {str(e)}")
             return np.array([]), np.array([])
+
     def _calculate_fibonacci_retracements(self, prices: pd.Series) -> Dict[str, float]:
         try:
             high = prices.max()
@@ -396,6 +476,7 @@ class DipWatcher:
         except Exception as e:
             logger.error(f"Failed to calculate Fibonacci retracements: {str(e)}")
             return {}
+
     def _calculate_sentiment(self, symbol: str) -> float:
         try:
             mock_news = {
@@ -410,12 +491,14 @@ class DipWatcher:
         except Exception as e:
             logger.error(f"Failed to calculate sentiment for {symbol}: {str(e)}")
             return 0.0
+
     def _calculate_dip_probability(self, dip_pct: float) -> float:
         try:
             return min(dip_pct / self.dip_threshold, 1.0)
         except Exception as e:
             logger.error(f"Failed to calculate dip probability: {str(e)}")
             return 0.0
+
     def _append_csv(self, row: Dict) -> None:
         try:
             df = pd.DataFrame([row])
@@ -423,9 +506,56 @@ class DipWatcher:
         except Exception as e:
             logger.error(f"Failed to append to CSV {self.csv_file}: {str(e)}")
 
+
+# --- Helper Dialog for Details ---
+class StockInfoDialog(QDialog):
+    """A simple dialog to display detailed stock information."""
+    def __init__(self,  Dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Info for {data['symbol']}")
+        self.setModal(True) # Make it a modal dialog
+        self.resize(400, 300) # Reasonable default size
+
+        layout = QVBoxLayout()
+
+        currency = data['currency']
+        details_text = (
+            f"<b>Exchange:</b> {data['exchange']}<br>"
+            f"<b>Last Price:</b> {currency}{data['last_price']:.2f}<br>"
+            f"<b>Bid:</b> {currency}{data['bid']:.2f}<br>"
+            f"<b>Ask:</b> {currency}{data['ask']:.2f}<br>"
+            f"<b>Spread:</b> {data['spread']:.2%}<br>"
+            f"<b>Dip %:</b> {data['dip_pct']:.2%}<br>"
+            f"<b>Volume:</b> {data['volume']:,}<br>"
+            f"<b>Avg Volume (20d):</b> {data['avg_volume']:,.0f}<br>"
+            f"<b>RSI (Period {getattr(parent, 'watcher', None).rsi_period if getattr(parent, 'watcher', None) else 'N/A'}):</b> {data['rsi']:.2f}<br>"
+            f"<b>Sentiment Score:</b> {data['sentiment_score']:.2f}<br>"
+        )
+        # Add SMAs
+        for period, value in data['smas'].items():
+            details_text += f"<b>{period}:</b> {currency}{value:.2f}<br>"
+        # Add Fibonacci Levels
+        for level, price in data['fib_levels'].items():
+            details_text += f"<b>Fibonacci {level}:</b> {currency}{price:.2f}<br>"
+
+        text_edit = QTextEdit()
+        text_edit.setHtml(details_text)
+        text_edit.setReadOnly(True)
+        layout.addWidget(text_edit)
+
+        # Add a close button for clarity
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(close_btn)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
 # --- Main Dialog with Chart Focus ---
 class StockDetailsDialog(QDialog):
-    def __init__(self, data: Dict, parent=None):
+    def __init__(self,  Dict, parent=None):
         super().__init__(parent)
         self.data = data # Store data for the info dialog
         self.parent_ref = parent # Keep a reference to parent for accessing watcher settings if needed
@@ -564,6 +694,7 @@ class StockDetailsDialog(QDialog):
             logger.error(f"Failed to show stock info dialog: {str(e)}")
             QMessageBox.critical(self, "Error", "Could not display stock information.")
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -650,7 +781,7 @@ class MainWindow(QMainWindow):
         self.addAction(QAction("Add Ticker", self, shortcut=QKeySequence("Ctrl+A"), triggered=self.add_ticker))
         self.addAction(QAction("Import Tickers", self, shortcut=QKeySequence("Ctrl+I"), triggered=self.import_tickers))
         self.addAction(QAction("Export Alerts", self, shortcut=QKeySequence("Ctrl+E"), triggered=self.export_alerts))
-        self.interval = settings.get('interval', 10) * 1000
+        self.interval = settings.get('interval', 10) * 1000 # Stored in seconds, convert to ms
         self.worker = DataWorker(self.watcher, self.watchlist, self.interval)
         self.worker.data_updated.connect(self.handle_data_update)
         self.worker.start()
@@ -658,12 +789,14 @@ class MainWindow(QMainWindow):
         # Responsive design
         self.setStyleSheet(self._get_stylesheet())
         self.resizeEvent = self.handle_resize
+
     def _get_stylesheet(self) -> str:
         base_style = """
             QMainWindow, QDialog { font-size: 14px; }
             QTableWidget { font-size: 12px; }
             QPushButton { padding: 5px; font-size: 12px; }
             QLabel { font-size: 12px; }
+            QGroupBox { font-weight: bold; }
         """
         if self.is_dark_mode:
             return base_style + """
@@ -671,22 +804,27 @@ class MainWindow(QMainWindow):
                 QTableWidget { background-color: #333333; color: #ffffff; }
                 QPushButton { background-color: #444444; color: #ffffff; }
                 QCheckBox { color: #ffffff; }
+                QGroupBox { border: 1px solid #555555; margin-top: 1ex; }
             """
         return base_style + """
             QMainWindow, QDialog { background-color: #ffffff; color: #000000; }
             QTableWidget { background-color: #f0f0f0; color: #000000; }
             QPushButton { background-color: #e0e0e0; color: #000000; }
             QCheckBox { color: #000000; }
+            QGroupBox { border: 1px solid #cccccc; margin-top: 1ex; }
         """
+
     def toggle_dark_mode(self, state):
         self.is_dark_mode = state == Qt.CheckState.Checked.value
         self.setStyleSheet(self._get_stylesheet())
         self.save_settings()
         logger.info(f"Dark mode set to {self.is_dark_mode}")
+
     def handle_resize(self, event):
         font_size = max(10, min(14, int(self.width() / 80)))
         self.setStyleSheet(self._get_stylesheet().replace('14px', f'{font_size}px').replace('12px', f'{font_size-2}px'))
         super().resizeEvent(event)
+
     def load_settings(self) -> Dict:
         try:
             if self.settings_file.exists():
@@ -697,7 +835,7 @@ class MainWindow(QMainWindow):
                         'max_ask_spread': float(settings.get('max_ask_spread', 0.02)),
                         'lookback_periods': [int(p) for p in settings.get('lookback_periods', [5, 20])],
                         'rsi_period': int(settings.get('rsi_period', 14)),
-                        'interval': int(settings.get('interval', 10)),
+                        'interval': int(settings.get('interval', 10)), # Stored in seconds
                         'volume_multipliers': {
                             k: float(v) for k, v in settings.get('volume_multipliers', {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7}).items()
                         },
@@ -708,7 +846,7 @@ class MainWindow(QMainWindow):
                 'max_ask_spread': 0.02,
                 'lookback_periods': [5, 20],
                 'rsi_period': 14,
-                'interval': 10,
+                'interval': 10, # Stored in seconds
                 'volume_multipliers': {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7},
                 'dark_mode': False
             }
@@ -719,10 +857,11 @@ class MainWindow(QMainWindow):
                 'max_ask_spread': 0.02,
                 'lookback_periods': [5, 20],
                 'rsi_period': 14,
-                'interval': 10,
+                'interval': 10, # Stored in seconds
                 'volume_multipliers': {'US': 0.8, 'JSE': 0.5, 'LSE': 0.7},
                 'dark_mode': False
             }
+
     def save_settings(self) -> None:
         try:
             with self.settings_file.open('w') as f:
@@ -731,12 +870,13 @@ class MainWindow(QMainWindow):
                     'max_ask_spread': self.watcher.max_ask_spread,
                     'lookback_periods': list(self.watcher.lookback_periods),
                     'rsi_period': self.watcher.rsi_period,
-                    'interval': self.interval // 1000,
+                    'interval': self.interval // 1000, # Save in seconds
                     'volume_multipliers': self.watcher.volume_multipliers,
                     'dark_mode': self.is_dark_mode
                 }, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save settings: {str(e)}")
+
     def load_watchlist(self) -> List[Dict]:
         try:
             if self.cloud_file.exists():
@@ -779,6 +919,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to load watchlist: {str(e)}")
             return []
+
     def save_watchlist(self) -> None:
         try:
             with self.watchlist_file.open('w') as f:
@@ -790,6 +931,7 @@ class MainWindow(QMainWindow):
             logger.info("Saved watchlist to watchlist.json")
         except Exception as e:
             logger.error(f"Failed to save watchlist: {str(e)}")
+
     def sync_to_cloud(self):
         try:
             with self.cloud_file.open('w') as f:
@@ -803,6 +945,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to sync to cloud: {str(e)}")
             QMessageBox.critical(self, "Sync Error", "Failed to sync to cloud.")
+
     def add_ticker(self):
         if len(self.watchlist) >= 25:
             QMessageBox.warning(self, "Limit Reached", "You can add up to 25 stocks to the watchlist.")
@@ -825,6 +968,7 @@ class MainWindow(QMainWindow):
                 self.table.setItem(row, 7, target_item)
                 self.save_watchlist()
                 logger.info(f"Added ticker {formatted} to watchlist")
+
     def import_tickers(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Import Tickers", "", "CSV Files (*.csv);;Text Files (*.txt)")
         if file_path:
@@ -861,6 +1005,7 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 logger.error(f"Failed to import tickers from {file_path}: {str(e)}")
                 QMessageBox.critical(self, "Import Error", f"Failed to import tickers: {str(e)}")
+
     def remove_ticker(self):
         row = self.table.currentRow()
         if row >= 0:
@@ -870,6 +1015,7 @@ class MainWindow(QMainWindow):
             self.table.removeRow(row)
             self.save_watchlist()
             logger.info(f"Removed ticker {ticker} from watchlist")
+
     def export_alerts(self):
         if not self.watcher.csv_file.exists():
             QMessageBox.warning(self, "No Alerts", "No dip alerts available to export.")
@@ -885,6 +1031,7 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 logger.error(f"Failed to export alerts to {file_path}: {str(e)}")
                 QMessageBox.critical(self, "Export Error", f"Failed to export alerts: {str(e)}")
+
     def show_details(self, index):
         row = index.row()
         if row >= 0:
@@ -899,6 +1046,7 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 logger.error(f"Failed to show details for {stock['ticker']}: {str(e)}")
                 QMessageBox.critical(self, "Error", f"Failed to load details for {stock['ticker']}.")
+
     def handle_data_update(self, results: List[Tuple[Dict, Optional[Dict]]]):
         for i, (stock, data) in enumerate(results):
             if data is None:
@@ -955,6 +1103,7 @@ class MainWindow(QMainWindow):
                     except Exception as e:
                         logger.error(f"Failed to show target notification for {stock['ticker']}: {str(e)}")
             self.table.setItem(i, 8, status_item)
+
     def update_data(self):
         try:
             results = [(stock, self.watcher.get_stock_data(stock['ticker'])) for stock in self.watchlist]
@@ -962,55 +1111,32 @@ class MainWindow(QMainWindow):
             logger.info("Manual data update triggered")
         except Exception as e:
             logger.error(f"Failed to update data: {str(e)}")
+
+    # --- MODIFIED: Open Settings Dialog ---
     def open_settings(self):
+        """Opens the new SettingsDialog."""
         try:
-            dip_th, ok = QInputDialog.getDouble(self, "Dip Threshold", "Enter dip threshold (0-1):", self.watcher.dip_threshold, 0, 1, decimals=2)
-            if ok:
-                self.watcher.dip_threshold = dip_th
+            # Create the dialog with current settings
+            dialog = SettingsDialog(self.watcher, self.interval // 1000, self) # Pass interval in seconds
+            settings = dialog.get_settings()
+            if settings:
+                # Apply settings if dialog was accepted and validation passed
+                self.watcher.dip_threshold = settings['dip_threshold']
+                self.watcher.max_ask_spread = settings['max_ask_spread']
+                self.watcher.lookback_periods = settings['lookback_periods']
+                self.watcher.rsi_period = settings['rsi_period']
+                # Update interval for both the timer and the worker
+                self.interval = settings['interval'] * 1000 # Convert back to milliseconds
+                self.worker.interval = settings['interval'] # Worker expects seconds
+                self.watcher.volume_multipliers = settings['volume_multipliers']
                 self.save_settings()
-                logger.info(f"Updated dip threshold to {dip_th}")
-            max_sp, ok = QInputDialog.getDouble(self, "Max Ask Spread", "Enter max ask spread (0-1):", self.watcher.max_ask_spread, 0, 1, decimals=2)
-            if ok:
-                self.watcher.max_ask_spread = max_sp
-                self.save_settings()
-                logger.info(f"Updated max ask spread to {max_sp}")
-            lookback_str, ok = QInputDialog.getText(self, "Lookback Periods", "Enter lookback periods (comma separated):", text=",".join(map(str, self.watcher.lookback_periods)))
-            if ok:
-                try:
-                    self.watcher.lookback_periods = tuple(map(int, lookback_str.split(',')))
-                    self.save_settings()
-                    logger.info(f"Updated lookback periods to {self.watcher.lookback_periods}")
-                except ValueError as e:
-                    logger.error(f"Invalid lookback periods input: {str(e)}")
-            rsi_period, ok = QInputDialog.getInt(self, "RSI Period", "Enter RSI period (5-50):", self.watcher.rsi_period, 5, 50)
-            if ok:
-                self.watcher.rsi_period = rsi_period
-                self.save_settings()
-                logger.info(f"Updated RSI period to {rsi_period}")
-            interval, ok = QInputDialog.getInt(self, "Interval (seconds)", "Enter poll interval:", self.interval // 1000, 5, 3600)
-            if ok:
-                self.interval = interval * 1000
-                self.worker.interval = interval
-                self.save_settings()
-                logger.info(f"Updated poll interval to {interval} seconds")
-            us_mult, ok = QInputDialog.getDouble(self, "US Volume Multiplier", "Enter US volume multiplier:", self.watcher.volume_multipliers.get('US', 0.8), 0, 2, decimals=2)
-            if ok:
-                self.watcher.volume_multipliers['US'] = us_mult
-                self.save_settings()
-                logger.info(f"Updated US volume multiplier to {us_mult}")
-            jse_mult, ok = QInputDialog.getDouble(self, "JSE Volume Multiplier", "Enter JSE volume multiplier:", self.watcher.volume_multipliers.get('JSE', 0.5), 0, 2, decimals=2)
-            if ok:
-                self.watcher.volume_multipliers['JSE'] = jse_mult
-                self.save_settings()
-                logger.info(f"Updated JSE volume multiplier to {jse_mult}")
-            lse_mult, ok = QInputDialog.getDouble(self, "LSE Volume Multiplier", "Enter LSE volume multiplier:", self.watcher.volume_multipliers.get('LSE', 0.7), 0, 2, decimals=2)
-            if ok:
-                self.watcher.volume_multipliers['LSE'] = lse_mult
-                self.save_settings()
-                logger.info(f"Updated LSE volume multiplier to {lse_mult}")
+                logger.info("Settings updated via SettingsDialog")
+                QMessageBox.information(self, "Settings Updated", "Settings have been successfully updated.")
+            # If settings is None, the user cancelled or validation failed, so do nothing.
         except Exception as e:
             logger.error(f"Failed to open settings dialog: {str(e)}")
-            QMessageBox.critical(self, "Settings Error", "Failed to update settings.")
+            QMessageBox.critical(self, "Settings Error", "An error occurred while opening the settings dialog.")
+
     def closeEvent(self, event):
         event.ignore()
         self.hide()
@@ -1019,6 +1145,7 @@ class MainWindow(QMainWindow):
             logger.info("Application minimized to system tray")
         except Exception as e:
             logger.error(f"Failed to minimize to tray: {str(e)}")
+
     def __del__(self):
         if hasattr(self, 'worker'):
             self.worker.stop()
