@@ -10,5 +10,13 @@
   {
     "ticker": "MTN.JO",
     "target": null
+  },
+  {
+    "ticker": "REM.JO",
+    "target": null
+  },
+  {
+    "ticker": "PRX.JO",
+    "target": null
   }
 ]
